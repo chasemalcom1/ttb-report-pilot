@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +13,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, isAuthenticated, loading } = useAuth();
+  const { login, user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -26,10 +27,10 @@ const Login = () => {
 
   // Redirect if already authenticated, but only after the auth check is complete
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+    if (!loading && user) {
+      navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate, loading]);
+  }, [user, navigate, loading, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,14 +44,13 @@ const Login = () => {
     
     try {
       await login(email, password);
-      navigate(from, { replace: true });
+      // We don't need to navigate here since the useEffect will handle it
     } catch (error) {
       let message = 'Failed to sign in';
       if (error instanceof Error) {
         message = error.message;
       }
       toast.error(message);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -66,6 +66,16 @@ const Login = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-booze-cream to-booze-amber/20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2">Checking authentication...</span>
+      </div>
+    );
+  }
+
+  // If already authenticated, show loading indicator until redirect happens
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-booze-cream to-booze-amber/20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Redirecting to dashboard...</span>
       </div>
     );
   }

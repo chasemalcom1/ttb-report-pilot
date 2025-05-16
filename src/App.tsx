@@ -27,6 +27,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             
@@ -64,8 +65,6 @@ const App = () => (
                 </AppLayout>
               </AuthGuard>
             } />
-            
-            {/* More routes would be added here */}
             
             {/* Catch All */}
             <Route path="*" element={<NotFound />} />

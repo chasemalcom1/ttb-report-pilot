@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,7 +12,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -25,12 +24,12 @@ const Login = () => {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated, but only after the auth check is complete
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!loading && isAuthenticated) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +59,16 @@ const Login = () => {
     setEmail(demoEmail);
     setPassword(demoPassword);
   };
+
+  // Show loading indicator while checking authentication status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-booze-cream to-booze-amber/20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Checking authentication...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-booze-cream to-booze-amber/20 p-4">

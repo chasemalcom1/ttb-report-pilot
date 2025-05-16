@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -263,7 +262,7 @@ const Operations = () => {
                       <SelectValue placeholder="Select batch" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None (Create New)</SelectItem>
+                      <SelectItem value="none">None (Create New)</SelectItem>
                       {filteredBatches.map(batch => (
                         <SelectItem key={batch.id} value={batch.id}>
                           {batch.batchNumber}

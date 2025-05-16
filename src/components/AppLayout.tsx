@@ -37,9 +37,12 @@ import {
 } from 'lucide-react';
 
 const AppSidebar = () => {
-  const { collapsed } = useSidebar();
+  const { state } = useSidebar();
   const location = useLocation();
   const { user } = useAuth();
+  
+  // Determine if sidebar is collapsed based on state
+  const collapsed = state === "collapsed";
   
   const isActive = (path: string) => location.pathname === path;
   const getNavClass = (path: string) => {
@@ -49,7 +52,7 @@ const AppSidebar = () => {
   };
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible>
+    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarTrigger className="m-2 self-end text-sidebar-foreground hover:text-sidebar-primary" />
       
       <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-start px-4'} mb-8`}>
@@ -158,7 +161,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
 
   return (
-    <SidebarProvider collapsedWidth={56}>
+    <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         

@@ -1,26 +1,78 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+import { AuthProvider } from "@/contexts/AuthContext";
+import AuthGuard from "@/components/AuthGuard";
+import AppLayout from "@/components/AppLayout";
+
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Operations from "./pages/Operations";
+import Spirits from "./pages/Spirits";
+import Report5110_40 from "./pages/Report5110_40";
+import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            
+            {/* Protected Routes */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            
+            <Route path="/dashboard" element={
+              <AuthGuard>
+                <AppLayout>
+                  <Dashboard />
+                </AppLayout>
+              </AuthGuard>
+            } />
+            
+            <Route path="/operations" element={
+              <AuthGuard>
+                <AppLayout>
+                  <Operations />
+                </AppLayout>
+              </AuthGuard>
+            } />
+            
+            <Route path="/spirits" element={
+              <AuthGuard>
+                <AppLayout>
+                  <Spirits />
+                </AppLayout>
+              </AuthGuard>
+            } />
+            
+            <Route path="/reports/5110-40" element={
+              <AuthGuard>
+                <AppLayout>
+                  <Report5110_40 />
+                </AppLayout>
+              </AuthGuard>
+            } />
+            
+            {/* More routes would be added here */}
+            
+            {/* Catch All */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

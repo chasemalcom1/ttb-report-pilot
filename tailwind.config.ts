@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Custom booze cruiser colors
+				booze: {
+					amber: '#D4A24E',
+					navy: '#1A2A4A',
+					copper: '#BD7451',
+					cream: '#F9F6F0',
+					sage: '#7A8C7E',
 				}
 			},
 			borderRadius: {

@@ -76,17 +76,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load user from localStorage only once on initial mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('user');
       }
+    } catch (error) {
+      console.error('Failed to parse stored user:', error);
+      localStorage.removeItem('user');
+    } finally {
+      // Always set loading to false when done
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {

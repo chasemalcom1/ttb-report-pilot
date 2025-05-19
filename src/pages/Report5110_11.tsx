@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import CalendarIcon from "@/components/icons/CalendarIcon";
@@ -14,12 +13,12 @@ import { Download, FileText, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { 
-  MOCK_OPERATIONS, 
+  MOCK_OPERATIONS,
   sumOperationsByType
 } from "@/lib/models";
 import { toast } from "@/components/ui/sonner";
 
-const Report5110_40 = () => {
+const Report5110_11 = () => {
   const [reportPeriod, setReportPeriod] = useState<Date>(startOfMonth(subMonths(new Date(), 1)));
   const [registrationNumber, setRegistrationNumber] = useState("DSP-NY-12345");
   const [proprietorName, setProprietorName] = useState("Mountain Spirits Distillery");
@@ -30,29 +29,16 @@ const Report5110_40 = () => {
   const startDate = startOfMonth(reportPeriod);
   const endDate = endOfMonth(reportPeriod);
   
-  // Calculate report summary values
-  const productionTotal = sumOperationsByType(MOCK_OPERATIONS, 'production', startDate, endDate);
-  const bottlingTotal = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startDate, endDate);
-  const lossesTotal = sumOperationsByType(MOCK_OPERATIONS, 'loss', startDate, endDate);
-  const transferOutTotal = sumOperationsByType(MOCK_OPERATIONS, 'transfer_out', startDate, endDate);
-  const transferInTotal = sumOperationsByType(MOCK_OPERATIONS, 'transfer_in', startDate, endDate);
-  
-  // Calculate beginning inventory (this would normally come from database)
-  const beginningInventory = 245.6;
-  
-  // Calculate ending inventory
-  const endingInventory = beginningInventory + 
-                          productionTotal + 
-                          transferInTotal - 
-                          bottlingTotal - 
-                          transferOutTotal - 
-                          lossesTotal;
+  // Calculate report summary values from operations
+  const spiritProduced = sumOperationsByType(MOCK_OPERATIONS, 'production', startDate, endDate);
+  const spiritReceived = sumOperationsByType(MOCK_OPERATIONS, 'transfer_in', startDate, endDate);
+  const spiritBottled = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startDate, endDate);
   
   const handleDownloadPDF = () => {
     // Generate PDF file name
-    const fileName = `TTB_5110_40_${format(reportPeriod, "yyyy-MM")}.pdf`;
+    const fileName = `TTB_5110_11_${format(reportPeriod, "yyyy-MM")}.pdf`;
     
-    toast.success("Downloading TTB Form 5110.40", {
+    toast.success("Downloading TTB Form 5110.11", {
       description: `Downloading ${fileName}`
     });
     
@@ -70,7 +56,7 @@ const Report5110_40 = () => {
   };
   
   const handlePrintReport = () => {
-    toast.success("Preparing TTB Form 5110.40 for printing", {
+    toast.success("Preparing TTB Form 5110.11 for printing", {
       description: "Opening print dialog..."
     });
     // In a real implementation, this would open the print dialog with formatted content
@@ -83,9 +69,9 @@ const Report5110_40 = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Form 5110.40</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Form 5110.11</h1>
           <p className="text-muted-foreground">
-            Monthly Report of Operations for Distilled Spirits Plants
+            Monthly Report of Storage Operations
           </p>
         </div>
         
@@ -106,7 +92,7 @@ const Report5110_40 = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <FileText className="mr-2 h-5 w-5" />
-            Monthly Report of Operations (Form 5110.40)
+            Monthly Report of Storage Operations (Form 5110.11)
           </CardTitle>
           <CardDescription>
             Reporting period: {format(reportPeriod, "MMMM yyyy")}
@@ -116,7 +102,7 @@ const Report5110_40 = () => {
           <Tabs defaultValue="report">
             <TabsList className="mb-6">
               <TabsTrigger value="report">Report</TabsTrigger>
-              <TabsTrigger value="info">Plant Information</TabsTrigger>
+              <TabsTrigger value="info">Storage Information</TabsTrigger>
               <TabsTrigger value="operations">Operations Detail</TabsTrigger>
             </TabsList>
             
@@ -169,7 +155,7 @@ const Report5110_40 = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="proprietorAddress">Plant Address</Label>
+                  <Label htmlFor="proprietorAddress">Storage Facility Address</Label>
                   <Input
                     id="proprietorAddress"
                     value={proprietorAddress}
@@ -204,7 +190,7 @@ const Report5110_40 = () => {
             
             <TabsContent value="report">
               <div className="mb-6">
-                <h3 className="text-lg font-medium mb-2">Part I - Summary of Spirits Activity</h3>
+                <h3 className="text-lg font-medium mb-2">Part I - Storage Operations</h3>
                 <p className="text-sm text-muted-foreground mb-4">
                   All figures are in proof gallons
                 </p>
@@ -222,12 +208,12 @@ const Report5110_40 = () => {
                         <td className="p-3">
                           <div className="font-medium">1. Beginning inventory</div>
                           <div className="text-xs text-muted-foreground">
-                            On hand beginning of month
+                            Spirits in storage beginning of month
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={beginningInventory.toFixed(1)}
+                            value="310.2"
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -236,14 +222,14 @@ const Report5110_40 = () => {
                       
                       <tr className="border-b">
                         <td className="p-3">
-                          <div className="font-medium">2. Spirits produced</div>
+                          <div className="font-medium">2. Deposited in storage</div>
                           <div className="text-xs text-muted-foreground">
-                            Total production (from operations log)
+                            From production/other sources
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={productionTotal.toFixed(1)}
+                            value={spiritProduced.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -252,14 +238,14 @@ const Report5110_40 = () => {
                       
                       <tr className="border-b">
                         <td className="p-3">
-                          <div className="font-medium">3. Spirits received</div>
+                          <div className="font-medium">3. Received in storage</div>
                           <div className="text-xs text-muted-foreground">
-                            Received from other plants
+                            Received from other facilities
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={transferInTotal.toFixed(1)}
+                            value={spiritReceived.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -268,23 +254,23 @@ const Report5110_40 = () => {
                       
                       <tr className="border-b bg-muted/20">
                         <td className="p-3 font-medium">
-                          4. Total spirits available
+                          4. Total (Lines 1, 2 & 3)
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(beginningInventory + productionTotal + transferInTotal).toFixed(1)}
+                          {(310.2 + spiritProduced + spiritReceived).toFixed(1)}
                         </td>
                       </tr>
                       
                       <tr className="border-b">
                         <td className="p-3">
-                          <div className="font-medium">5. Bottled</div>
+                          <div className="font-medium">5. Withdrawn from storage</div>
                           <div className="text-xs text-muted-foreground">
-                            Total bottled this month
+                            For processing/bottling
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={bottlingTotal.toFixed(1)}
+                            value={spiritBottled.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -293,30 +279,14 @@ const Report5110_40 = () => {
                       
                       <tr className="border-b">
                         <td className="p-3">
-                          <div className="font-medium">6. Transferred out</div>
+                          <div className="font-medium">6. Loss in storage</div>
                           <div className="text-xs text-muted-foreground">
-                            Transferred to other plants
+                            Evaporation & shrinkage
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={transferOutTotal.toFixed(1)}
-                            readOnly
-                            className="text-right w-28 bg-muted inline-block"
-                          />
-                        </td>
-                      </tr>
-                      
-                      <tr className="border-b">
-                        <td className="p-3">
-                          <div className="font-medium">7. Loss & Destruction</div>
-                          <div className="text-xs text-muted-foreground">
-                            Documented loss (normal & abnormal)
-                          </div>
-                        </td>
-                        <td className="p-3 text-right">
-                          <Input 
-                            value={lossesTotal.toFixed(1)}
+                            value="1.8"
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -325,50 +295,23 @@ const Report5110_40 = () => {
                       
                       <tr className="border-b bg-muted/20">
                         <td className="p-3 font-medium">
-                          8. Total spirits disposed of
+                          7. Total removed (Lines 5 & 6)
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(bottlingTotal + transferOutTotal + lossesTotal).toFixed(1)}
+                          {(spiritBottled + 1.8).toFixed(1)}
                         </td>
                       </tr>
                       
                       <tr className="border-b bg-muted/50">
                         <td className="p-3 font-bold">
-                          9. Ending inventory
+                          8. Ending inventory (Line 4 minus Line 7)
                         </td>
                         <td className="p-3 text-right font-bold">
-                          {endingInventory.toFixed(1)}
+                          {(310.2 + spiritProduced + spiritReceived - spiritBottled - 1.8).toFixed(1)}
                         </td>
                       </tr>
                     </tbody>
                   </table>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-medium mb-2">Certification</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Under penalties of perjury, I declare that I have examined this report and 
-                  accompanying documents, and to the best of my knowledge and belief, they 
-                  are true, correct, and complete.
-                </p>
-                
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="signerName">Signer Name</Label>
-                    <Input
-                      id="signerName"
-                      placeholder="Name of authorized signer"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signerTitle">Signer Title</Label>
-                    <Input
-                      id="signerTitle"
-                      placeholder="Title of authorized signer"
-                    />
-                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -432,4 +375,5 @@ const Report5110_40 = () => {
   );
 };
 
-export default Report5110_40;
+export default Report5110_11;
+

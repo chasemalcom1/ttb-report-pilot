@@ -63,8 +63,8 @@ export interface Report {
   updatedAt: Date;
 }
 
-// Mock data
-export const MOCK_SPIRITS: Spirit[] = [
+// Initial mock data
+const INITIAL_MOCK_SPIRITS: Spirit[] = [
   {
     id: '1',
     name: 'Mountain Rye Whiskey',
@@ -94,7 +94,7 @@ export const MOCK_SPIRITS: Spirit[] = [
   },
 ];
 
-export const MOCK_BATCHES: Batch[] = [
+const INITIAL_MOCK_BATCHES: Batch[] = [
   {
     id: '1',
     spiritId: '1',
@@ -131,7 +131,7 @@ export const MOCK_BATCHES: Batch[] = [
   },
 ];
 
-export const MOCK_OPERATIONS: Operation[] = [
+const INITIAL_MOCK_OPERATIONS: Operation[] = [
   {
     id: '1',
     type: 'production',
@@ -201,6 +201,40 @@ export const MOCK_OPERATIONS: Operation[] = [
   },
 ];
 
+// Get data from local storage or use initial data
+function getFromLocalStorage<T>(key: string, initialData: T[]): T[] {
+  try {
+    const storedData = localStorage.getItem(key);
+    if (storedData) {
+      // Parse and handle date objects correctly
+      const parsed = JSON.parse(storedData, (key, value) => {
+        if (key === 'createdAt' || key === 'productionDate' || key === 'date' || key === 'submittedAt' || key === 'updatedAt') {
+          return new Date(value);
+        }
+        return value;
+      });
+      return Array.isArray(parsed) ? parsed : initialData;
+    }
+  } catch (error) {
+    console.error(`Error retrieving ${key} from localStorage:`, error);
+  }
+  return initialData;
+}
+
+// Save data to local storage
+function saveToLocalStorage<T>(key: string, data: T[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error(`Error saving ${key} to localStorage:`, error);
+  }
+}
+
+// Export the persisted data
+export let MOCK_SPIRITS = getFromLocalStorage<Spirit>('spirits', INITIAL_MOCK_SPIRITS);
+export let MOCK_BATCHES = getFromLocalStorage<Batch>('batches', INITIAL_MOCK_BATCHES);
+export let MOCK_OPERATIONS = getFromLocalStorage<Operation>('operations', INITIAL_MOCK_OPERATIONS);
+
 export const MOCK_REPORTS: Report[] = [
   {
     id: '1',
@@ -217,6 +251,25 @@ export const MOCK_REPORTS: Report[] = [
     updatedAt: new Date('2023-05-15'),
   },
 ];
+
+// Helper functions to add new items and persist them
+export function addSpirit(spirit: Spirit): void {
+  MOCK_SPIRITS = [...MOCK_SPIRITS, spirit];
+  saveToLocalStorage('spirits', MOCK_SPIRITS);
+  console.info('Adding new spirit:', spirit);
+}
+
+export function addBatch(batch: Batch): void {
+  MOCK_BATCHES = [...MOCK_BATCHES, batch];
+  saveToLocalStorage('batches', MOCK_BATCHES);
+  console.info('Adding new batch:', batch);
+}
+
+export function addOperation(operation: Operation): void {
+  MOCK_OPERATIONS = [...MOCK_OPERATIONS, operation];
+  saveToLocalStorage('operations', MOCK_OPERATIONS);
+  console.info('Adding new operation:', operation);
+}
 
 // Utility functions for calculations
 export const literToProofGallon = (liters: number, proof: number): number => {

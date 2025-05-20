@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,9 +12,9 @@ import { Download, FileText, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { 
-  MOCK_OPERATIONS,
-  sumOperationsByType
+  MOCK_OPERATIONS
 } from "@/lib/models";
+import { calculateInventory } from "@/lib/reportUtils";
 import { toast } from "@/components/ui/sonner";
 
 const Report5110_11 = () => {
@@ -23,15 +23,26 @@ const Report5110_11 = () => {
   const [proprietorName, setProprietorName] = useState("Mountain Spirits Distillery");
   const [proprietorAddress, setProprietorAddress] = useState("123 Main St, Springfield, NY 12345");
   const [einNumber, setEinNumber] = useState("XX-XXXXXXX");
+  const [inventory, setInventory] = useState({
+    beginningInventory: 310.2,
+    production: 0,
+    transferIn: 0,
+    bottling: 0,
+    taxWithdrawal: 0,
+    transferOut: 0,
+    loss: 1.8,
+    endingInventory: 0
+  });
   
   // Create date range for the selected month
   const startDate = startOfMonth(reportPeriod);
   const endDate = endOfMonth(reportPeriod);
   
-  // Calculate report summary values from operations
-  const spiritProduced = sumOperationsByType(MOCK_OPERATIONS, 'production', startDate, endDate);
-  const spiritReceived = sumOperationsByType(MOCK_OPERATIONS, 'transfer_in', startDate, endDate);
-  const spiritBottled = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startDate, endDate);
+  // Update inventory calculations when operations or report period changes
+  useEffect(() => {
+    const calculatedInventory = calculateInventory(startDate, endDate, 310.2);
+    setInventory(calculatedInventory);
+  }, [reportPeriod, MOCK_OPERATIONS, startDate, endDate]);
   
   // Generate PDF content for download
   const generatePDFContent = () => {
@@ -46,12 +57,12 @@ const Report5110_11 = () => {
       Address: ${proprietorAddress}
       
       Summary:
-      - Beginning Inventory: 310.2 proof gallons
-      - Deposited in storage: ${spiritProduced.toFixed(1)} proof gallons
-      - Received in storage: ${spiritReceived.toFixed(1)} proof gallons
-      - Withdrawn from storage: ${spiritBottled.toFixed(1)} proof gallons
-      - Loss in storage: 1.8 proof gallons
-      - Ending inventory: ${(310.2 + spiritProduced + spiritReceived - spiritBottled - 1.8).toFixed(1)} proof gallons
+      - Beginning Inventory: ${inventory.beginningInventory.toFixed(1)} proof gallons
+      - Deposited in storage: ${inventory.production.toFixed(1)} proof gallons
+      - Received in storage: ${inventory.transferIn.toFixed(1)} proof gallons
+      - Withdrawn from storage: ${inventory.bottling.toFixed(1)} proof gallons
+      - Loss in storage: ${inventory.loss.toFixed(1)} proof gallons
+      - Ending inventory: ${inventory.endingInventory.toFixed(1)} proof gallons
     `;
     
     // Convert to data URL for download (in a real app, this would be a PDF)
@@ -111,35 +122,35 @@ const Report5110_11 = () => {
           <tbody>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">1. Beginning inventory</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">310.2</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.beginningInventory.toFixed(1)}</td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">2. Deposited in storage</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${spiritProduced.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.production.toFixed(1)}</td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">3. Received in storage</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${spiritReceived.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.transferIn.toFixed(1)}</td>
             </tr>
             <tr style="background-color: #f2f2f2;">
               <td style="border: 1px solid #ddd; padding: 8px;"><strong>4. Total (Lines 1, 2 & 3)</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(310.2 + spiritProduced + spiritReceived).toFixed(1)}</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(inventory.beginningInventory + inventory.production + inventory.transferIn).toFixed(1)}</strong></td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">5. Withdrawn from storage</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${spiritBottled.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.bottling.toFixed(1)}</td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">6. Loss in storage</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">1.8</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.loss.toFixed(1)}</td>
             </tr>
             <tr style="background-color: #f2f2f2;">
               <td style="border: 1px solid #ddd; padding: 8px;"><strong>7. Total removed (Lines 5 & 6)</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(spiritBottled + 1.8).toFixed(1)}</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(inventory.bottling + inventory.loss).toFixed(1)}</strong></td>
             </tr>
             <tr style="background-color: #e6e6e6;">
               <td style="border: 1px solid #ddd; padding: 8px;"><strong>8. Ending inventory (Line 4 minus Line 7)</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(310.2 + spiritProduced + spiritReceived - spiritBottled - 1.8).toFixed(1)}</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${inventory.endingInventory.toFixed(1)}</strong></td>
             </tr>
           </tbody>
         </table>
@@ -311,7 +322,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value="310.2"
+                            value={inventory.beginningInventory.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -327,7 +338,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={spiritProduced.toFixed(1)}
+                            value={inventory.production.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -343,7 +354,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={spiritReceived.toFixed(1)}
+                            value={inventory.transferIn.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -355,7 +366,7 @@ const Report5110_11 = () => {
                           4. Total (Lines 1, 2 & 3)
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(310.2 + spiritProduced + spiritReceived).toFixed(1)}
+                          {(inventory.beginningInventory + inventory.production + inventory.transferIn).toFixed(1)}
                         </td>
                       </tr>
                       
@@ -368,7 +379,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={spiritBottled.toFixed(1)}
+                            value={inventory.bottling.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -384,7 +395,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value="1.8"
+                            value={inventory.loss.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -396,7 +407,7 @@ const Report5110_11 = () => {
                           7. Total removed (Lines 5 & 6)
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(spiritBottled + 1.8).toFixed(1)}
+                          {(inventory.bottling + inventory.loss).toFixed(1)}
                         </td>
                       </tr>
                       
@@ -405,7 +416,7 @@ const Report5110_11 = () => {
                           8. Ending inventory (Line 4 minus Line 7)
                         </td>
                         <td className="p-3 text-right font-bold">
-                          {(310.2 + spiritProduced + spiritReceived - spiritBottled - 1.8).toFixed(1)}
+                          {inventory.endingInventory.toFixed(1)}
                         </td>
                       </tr>
                     </tbody>

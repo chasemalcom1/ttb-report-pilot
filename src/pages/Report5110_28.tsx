@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,9 +12,9 @@ import { Download, FileText, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { 
-  MOCK_OPERATIONS,
-  sumOperationsByType
+  MOCK_OPERATIONS
 } from "@/lib/models";
+import { calculateInventory } from "@/lib/reportUtils";
 import { toast } from "@/components/ui/sonner";
 
 const Report5110_28 = () => {
@@ -24,14 +23,27 @@ const Report5110_28 = () => {
   const [proprietorName, setProprietorName] = useState("Mountain Spirits Distillery");
   const [proprietorAddress, setProprietorAddress] = useState("123 Main St, Springfield, NY 12345");
   const [einNumber, setEinNumber] = useState("XX-XXXXXXX");
+  const [inventory, setInventory] = useState({
+    beginningInventory: 200.5,
+    bottling: 0,
+    taxWithdrawal: 0,
+    endingInventory: 0
+  });
   
   // Create date range for the selected month
   const startDate = startOfMonth(reportPeriod);
   const endDate = endOfMonth(reportPeriod);
   
-  // Calculate report summary values from operations
-  const bottlingProduction = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startDate, endDate);
-  const taxWithdrawals = sumOperationsByType(MOCK_OPERATIONS, 'tax_withdrawal', startDate, endDate);
+  // Update inventory calculations when operations or report period changes
+  useEffect(() => {
+    const calculatedInventory = calculateInventory(startDate, endDate, 200.5);
+    setInventory({
+      beginningInventory: 200.5,
+      bottling: calculatedInventory.bottling,
+      taxWithdrawal: calculatedInventory.taxWithdrawal,
+      endingInventory: 200.5 + calculatedInventory.bottling - calculatedInventory.taxWithdrawal
+    });
+  }, [reportPeriod, MOCK_OPERATIONS, startDate, endDate]);
   
   // Generate PDF content for download
   const generatePDFContent = () => {
@@ -46,10 +58,10 @@ const Report5110_28 = () => {
       Address: ${proprietorAddress}
       
       Summary:
-      - Beginning inventory: 200.5 proof gallons
-      - Bottling production: ${bottlingProduction.toFixed(1)} proof gallons
-      - Tax withdrawals: ${taxWithdrawals.toFixed(1)} proof gallons
-      - Ending inventory: ${(200.5 + bottlingProduction - taxWithdrawals).toFixed(1)} proof gallons
+      - Beginning inventory: ${inventory.beginningInventory.toFixed(1)} proof gallons
+      - Bottling production: ${inventory.bottling.toFixed(1)} proof gallons
+      - Tax withdrawals: ${inventory.taxWithdrawal.toFixed(1)} proof gallons
+      - Ending inventory: ${inventory.endingInventory.toFixed(1)} proof gallons
     `;
     
     // Convert to data URL for download (in a real app, this would be a PDF)
@@ -109,23 +121,23 @@ const Report5110_28 = () => {
           <tbody>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">1. Beginning inventory</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">200.5</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.beginningInventory.toFixed(1)}</td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">2. Bottling production</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${bottlingProduction.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.bottling.toFixed(1)}</td>
             </tr>
             <tr style="background-color: #f2f2f2;">
               <td style="border: 1px solid #ddd; padding: 8px;"><strong>3. Total (Lines 1 & 2)</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(200.5 + bottlingProduction).toFixed(1)}</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(inventory.beginningInventory + inventory.bottling).toFixed(1)}</strong></td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">4. Tax withdrawals</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${taxWithdrawals.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.taxWithdrawal.toFixed(1)}</td>
             </tr>
             <tr style="background-color: #e6e6e6;">
               <td style="border: 1px solid #ddd; padding: 8px;"><strong>5. Ending inventory (Line 3 minus Line 4)</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(200.5 + bottlingProduction - taxWithdrawals).toFixed(1)}</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${inventory.endingInventory.toFixed(1)}</strong></td>
             </tr>
           </tbody>
         </table>
@@ -297,7 +309,7 @@ const Report5110_28 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value="200.5"
+                            value={inventory.beginningInventory.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -313,7 +325,7 @@ const Report5110_28 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={bottlingProduction.toFixed(1)}
+                            value={inventory.bottling.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -325,7 +337,7 @@ const Report5110_28 = () => {
                           3. Total (Lines 1 & 2)
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(200.5 + bottlingProduction).toFixed(1)}
+                          {(inventory.beginningInventory + inventory.bottling).toFixed(1)}
                         </td>
                       </tr>
                       
@@ -338,7 +350,7 @@ const Report5110_28 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={taxWithdrawals.toFixed(1)}
+                            value={inventory.taxWithdrawal.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -350,7 +362,7 @@ const Report5110_28 = () => {
                           5. Ending inventory (Line 3 minus Line 4)
                         </td>
                         <td className="p-3 text-right font-bold">
-                          {(200.5 + bottlingProduction - taxWithdrawals).toFixed(1)}
+                          {inventory.endingInventory.toFixed(1)}
                         </td>
                       </tr>
                     </tbody>

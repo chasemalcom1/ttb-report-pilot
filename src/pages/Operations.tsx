@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,7 +19,10 @@ import {
   FileUp,
   Info,
   Trash2,
-  FlaskConical
+  FlaskConical,
+  Edit,
+  Plus,
+  X
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -28,9 +32,15 @@ import {
   MOCK_SPIRITS, 
   MOCK_BATCHES, 
   OperationType,
-  literToProofGallon
+  literToProofGallon,
+  addOperation,
+  updateOperation,
+  deleteOperation
 } from "@/lib/models";
 import { toast } from "@/components/ui/sonner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useForm, FormProvider, Controller } from "react-hook-form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 
 const typeToIcon = (type: OperationType) => {
   switch(type) {
@@ -79,13 +89,28 @@ const Operations = () => {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   
+  const [operations, setOperations] = useState([...MOCK_OPERATIONS]);
+  const [editingOperation, setEditingOperation] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [operationToDelete, setOperationToDelete] = useState<string | null>(null);
+  
   // For the operation log table
-  const operations = [...MOCK_OPERATIONS]
+  const filteredOperations = operations
     .filter(op => 
       (filterType === "all" || op.type === filterType) &&
-      (filterDate === undefined || format(op.date, 'yyyy-MM-dd') === format(filterDate, 'yyyy-MM-dd'))
+      (filterDate === undefined || format(op.date, 'yyyy-MM-dd') === format(filterDate, 'yyyy-MM-dd')) &&
+      (searchTerm === "" || 
+        op.notes?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        op.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        MOCK_SPIRITS.find(s => s.id === op.spiritId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     )
     .sort((a, b) => b.date.getTime() - a.date.getTime());
+  
+  // Load operations when component mounts
+  useEffect(() => {
+    setOperations([...MOCK_OPERATIONS]);
+  }, []);
   
   const handleLitersChange = (value: string) => {
     setLiters(value);
@@ -114,6 +139,8 @@ const Operations = () => {
   
   const handleBatchChange = (value: string) => {
     setBatchId(value);
+    if (value === "none" || value === "") return;
+    
     const batch = MOCK_BATCHES.find(b => b.id === value);
     if (batch) {
       const spirit = MOCK_SPIRITS.find(s => s.id === batch.spiritId);
@@ -135,7 +162,7 @@ const Operations = () => {
       type,
       date,
       spiritId,
-      batchId: batchId || undefined,
+      batchId: batchId && batchId !== "none" ? batchId : undefined,
       proof: Number(proof),
       liters: Number(liters),
       proofGallons: Number(proofGallons),
@@ -147,8 +174,11 @@ const Operations = () => {
       createdAt: new Date(),
     };
     
-    // We would normally send this to the server
-    console.log("Logging operation:", newOperation);
+    // Add to model and local storage
+    addOperation(newOperation);
+    
+    // Update local state
+    setOperations([...MOCK_OPERATIONS]);
     
     toast.success("Operation logged successfully");
     
@@ -162,6 +192,99 @@ const Operations = () => {
     setBottles("0");
     setDestination("");
     setNotes("");
+  };
+  
+  const handleEditOperation = (operationId: string) => {
+    const operation = operations.find(op => op.id === operationId);
+    if (!operation) return;
+    
+    setEditingOperation(operationId);
+    setDate(operation.date);
+    setType(operation.type);
+    setSpiritId(operation.spiritId || "");
+    setBatchId(operation.batchId || "");
+    setProof(operation.proof?.toString() || "80");
+    setLiters(operation.liters.toString());
+    setProofGallons(operation.proofGallons.toString());
+    setBottles(operation.bottles?.toString() || "0");
+    setBottleSize(operation.bottleSize || "750ml");
+    setDestination(operation.destinationOrSource || "");
+    setNotes(operation.notes || "");
+    
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleSaveEdit = () => {
+    if (!editingOperation || !spiritId || !type || !liters || Number(liters) <= 0) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
+    const updatedOperation = {
+      id: editingOperation,
+      type,
+      date,
+      spiritId,
+      batchId: batchId && batchId !== "none" ? batchId : undefined,
+      proof: Number(proof),
+      liters: Number(liters),
+      proofGallons: Number(proofGallons),
+      bottles: type === 'bottling' ? Number(bottles) : undefined,
+      bottleSize: type === 'bottling' ? bottleSize : undefined,
+      destinationOrSource: (type === 'transfer_in' || type === 'transfer_out') ? destination : undefined,
+      notes,
+      operatorId: '1', // Mocked user ID
+      createdAt: new Date(),
+    };
+    
+    // Update operation in model and local storage
+    updateOperation(updatedOperation);
+    
+    // Update local state
+    setOperations([...MOCK_OPERATIONS]);
+    
+    toast.success("Operation updated successfully");
+    
+    // Reset form and close dialog
+    resetForm();
+    setIsEditDialogOpen(false);
+    setEditingOperation(null);
+  };
+  
+  const handleDeletePrompt = (operationId: string) => {
+    setOperationToDelete(operationId);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const handleDeleteConfirm = () => {
+    if (!operationToDelete) return;
+    
+    // Delete operation from model and local storage
+    deleteOperation(operationToDelete);
+    
+    // Update local state
+    setOperations([...MOCK_OPERATIONS]);
+    
+    toast.success("Operation deleted successfully");
+    
+    // Close dialog
+    setIsDeleteDialogOpen(false);
+    setOperationToDelete(null);
+  };
+  
+  const resetForm = () => {
+    setDate(new Date());
+    setType('production');
+    setSpiritId("");
+    setBatchId("");
+    setProof("80");
+    setLiters("0");
+    setProofGallons("0");
+    setBottles("0");
+    setBottleSize("750ml");
+    setDestination("");
+    setNotes("");
+    setEditingOperation(null);
   };
   
   const filteredBatches = MOCK_BATCHES.filter(batch => 
@@ -460,17 +583,18 @@ const Operations = () => {
                       <th className="h-10 px-4 text-left font-medium">Volume</th>
                       <th className="h-10 px-4 text-left font-medium">PG</th>
                       <th className="h-10 px-4 text-left font-medium">Details</th>
+                      <th className="h-10 px-4 text-left font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {operations.length === 0 ? (
+                    {filteredOperations.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="h-24 text-center text-muted-foreground">
+                        <td colSpan={8} className="h-24 text-center text-muted-foreground">
                           No operations found
                         </td>
                       </tr>
                     ) : (
-                      operations.map((op) => {
+                      filteredOperations.map((op) => {
                         const spirit = MOCK_SPIRITS.find(s => s.id === op.spiritId);
                         const batch = MOCK_BATCHES.find(b => b.id === op.batchId);
                         
@@ -520,6 +644,25 @@ const Operations = () => {
                                 </div>
                               )}
                             </td>
+                            <td className="p-4">
+                              <div className="flex items-center space-x-2">
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost"
+                                  onClick={() => handleEditOperation(op.id)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  className="text-destructive"
+                                  onClick={() => handleDeletePrompt(op.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       })
@@ -531,6 +674,223 @@ const Operations = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Edit Operation Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Operation</DialogTitle>
+            <DialogDescription>
+              Update the details of this operation
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-date">Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "MMMM d, yyyy") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(date) => date && setDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-type">Type</Label>
+                <Select value={type} onValueChange={(value) => setType(value as OperationType)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="production">Production</SelectItem>
+                    <SelectItem value="bottling">Bottling</SelectItem>
+                    <SelectItem value="transfer_in">Transfer In</SelectItem>
+                    <SelectItem value="transfer_out">Transfer Out</SelectItem>
+                    <SelectItem value="loss">Loss</SelectItem>
+                    <SelectItem value="addition">Addition</SelectItem>
+                    <SelectItem value="redistillation">Redistillation</SelectItem>
+                    <SelectItem value="tax_withdrawal">Tax Withdrawal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-spirit">Spirit</Label>
+                <Select value={spiritId} onValueChange={handleSpiritChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select spirit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOCK_SPIRITS.map(spirit => (
+                      <SelectItem key={spirit.id} value={spirit.id}>
+                        {spirit.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-batch">Batch</Label>
+                <Select value={batchId} onValueChange={handleBatchChange} disabled={!spiritId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select batch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {filteredBatches.map(batch => (
+                      <SelectItem key={batch.id} value={batch.id}>
+                        {batch.batchNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-proof">Proof</Label>
+                <Input 
+                  id="edit-proof" 
+                  type="number"
+                  value={proof} 
+                  onChange={(e) => handleProofChange(e.target.value)}
+                  min="0"
+                  max="200"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-liters">Liters</Label>
+                <Input 
+                  id="edit-liters" 
+                  type="number"
+                  value={liters} 
+                  onChange={(e) => handleLitersChange(e.target.value)}
+                  min="0"
+                  step="0.1"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-proof-gallons">Proof Gallons</Label>
+                <Input
+                  id="edit-proof-gallons"
+                  value={proofGallons}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+            
+            {type === 'bottling' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-bottles">Number of Bottles</Label>
+                  <Input
+                    id="edit-bottles"
+                    type="number"
+                    value={bottles}
+                    onChange={(e) => setBottles(e.target.value)}
+                    min="0"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-bottle-size">Bottle Size</Label>
+                  <Select value={bottleSize} onValueChange={setBottleSize}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="50ml">50ml (Mini)</SelectItem>
+                      <SelectItem value="375ml">375ml (Half)</SelectItem>
+                      <SelectItem value="750ml">750ml (Standard)</SelectItem>
+                      <SelectItem value="1L">1 Liter</SelectItem>
+                      <SelectItem value="1.75L">1.75 Liter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            
+            {(type === 'transfer_in' || type === 'transfer_out') && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-destination">
+                  {type === 'transfer_in' ? 'Source' : 'Destination'}
+                </Label>
+                <Input
+                  id="edit-destination"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder={type === 'transfer_in' ? 'Where is this coming from?' : 'Where is this going to?'}
+                />
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes">Notes</Label>
+              <Textarea
+                id="edit-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional details about this operation"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              resetForm();
+              setIsEditDialogOpen(false);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this operation? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

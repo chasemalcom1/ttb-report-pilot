@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,14 +14,19 @@ import {
   SpiritType,
   literToProofGallon,
   addSpirit,
-  addBatch
+  updateSpirit,
+  deleteSpirit,
+  addBatch,
+  updateBatch,
+  deleteBatch
 } from "@/lib/models";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const Spirits = () => {
   // Spirit form state
@@ -29,6 +35,7 @@ const Spirits = () => {
   const [spiritType, setSpiritType] = useState<SpiritType>("whiskey");
   const [spiritProof, setSpiritProof] = useState("80");
   const [spiritDescription, setSpiritDescription] = useState("");
+  const [editingSpiritId, setEditingSpiritId] = useState<string | null>(null);
   
   // Batch form state
   const [newBatchOpen, setNewBatchOpen] = useState(false);
@@ -39,6 +46,13 @@ const Spirits = () => {
   const [batchLiters, setBatchLiters] = useState("0");
   const [batchProofGallons, setBatchProofGallons] = useState("0");
   const [batchNotes, setBatchNotes] = useState("");
+  const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
+  
+  // Delete confirmation dialogs
+  const [spiritToDelete, setSpiritToDelete] = useState<string | null>(null);
+  const [batchToDelete, setBatchToDelete] = useState<string | null>(null);
+  const [deleteSpiritDialogOpen, setDeleteSpiritDialogOpen] = useState(false);
+  const [deleteBatchDialogOpen, setDeleteBatchDialogOpen] = useState(false);
   
   // Display state
   const [selectedSpiritId, setSelectedSpiritId] = useState<string | null>(null);
@@ -79,29 +93,60 @@ const Spirits = () => {
     }
     
     const newSpirit = {
-      id: `spirit-${Date.now()}`,
+      id: editingSpiritId || `spirit-${Date.now()}`,
       name: spiritName,
       type: spiritType,
       defaultProof: Number(spiritProof),
       description: spiritDescription,
       active: true,
-      createdAt: new Date(),
+      createdAt: editingSpiritId ? MOCK_SPIRITS.find(s => s.id === editingSpiritId)!.createdAt : new Date(),
     };
     
-    // Add to model and local storage
-    addSpirit(newSpirit);
+    if (editingSpiritId) {
+      // Update existing spirit
+      updateSpirit(newSpirit);
+      toast.success(`Spirit "${spiritName}" updated successfully`);
+    } else {
+      // Add new spirit
+      addSpirit(newSpirit);
+      toast.success(`Spirit "${spiritName}" added successfully`);
+    }
     
     // Update local state
     setSpirits([...MOCK_SPIRITS]);
     
-    toast.success(`Spirit "${spiritName}" added successfully`);
-    
     // Reset form and close dialog
-    setSpiritName("");
-    setSpiritType("whiskey");
-    setSpiritProof("80");
-    setSpiritDescription("");
+    resetSpiritForm();
     setNewSpiritOpen(false);
+  };
+  
+  const handleEditSpirit = (spiritId: string) => {
+    const spirit = spirits.find(s => s.id === spiritId);
+    if (!spirit) return;
+    
+    setEditingSpiritId(spiritId);
+    setSpiritName(spirit.name);
+    setSpiritType(spirit.type);
+    setSpiritProof(spirit.defaultProof.toString());
+    setSpiritDescription(spirit.description || "");
+    
+    setNewSpiritOpen(true);
+  };
+  
+  const handleDeleteSpiritPrompt = (spiritId: string) => {
+    setSpiritToDelete(spiritId);
+    setDeleteSpiritDialogOpen(true);
+  };
+  
+  const handleDeleteSpiritConfirm = () => {
+    if (!spiritToDelete) return;
+    
+    deleteSpirit(spiritToDelete);
+    setSpirits([...MOCK_SPIRITS]);
+    toast.success("Spirit deleted successfully");
+    
+    setDeleteSpiritDialogOpen(false);
+    setSpiritToDelete(null);
   };
   
   const handleAddBatch = () => {
@@ -111,35 +156,71 @@ const Spirits = () => {
     }
     
     const newBatch = {
-      id: `batch-${Date.now()}`,
+      id: editingBatchId || `batch-${Date.now()}`,
       spiritId: batchSpiritId,
       batchNumber,
       productionDate: batchDate,
       proof: Number(batchProof),
-      originalLiters: Number(batchLiters),
+      originalLiters: editingBatchId ? 
+        MOCK_BATCHES.find(b => b.id === editingBatchId)!.originalLiters : 
+        Number(batchLiters),
       currentLiters: Number(batchLiters),
       status: 'in_production' as const,
       notes: batchNotes,
-      createdAt: new Date(),
+      createdAt: editingBatchId ? 
+        MOCK_BATCHES.find(b => b.id === editingBatchId)!.createdAt : 
+        new Date(),
     };
     
-    // Add to model and local storage
-    addBatch(newBatch);
+    if (editingBatchId) {
+      // Update existing batch
+      updateBatch(newBatch);
+      toast.success(`Batch "${batchNumber}" updated successfully`);
+    } else {
+      // Add new batch
+      addBatch(newBatch);
+      toast.success(`Batch "${batchNumber}" added successfully`);
+    }
     
     // Update local state
     setBatches([...MOCK_BATCHES]);
     
-    toast.success(`Batch "${batchNumber}" added successfully`);
-    
     // Reset form and close dialog
-    setBatchSpiritId("");
-    setBatchNumber("");
-    setBatchProof("80");
-    setBatchDate(new Date());
-    setBatchLiters("0");
-    setBatchProofGallons("0");
-    setBatchNotes("");
+    resetBatchForm();
     setNewBatchOpen(false);
+  };
+  
+  const handleEditBatch = (batchId: string) => {
+    const batch = batches.find(b => b.id === batchId);
+    if (!batch) return;
+    
+    setEditingBatchId(batchId);
+    setBatchSpiritId(batch.spiritId);
+    setBatchNumber(batch.batchNumber);
+    setBatchProof(batch.proof.toString());
+    setBatchDate(batch.productionDate);
+    setBatchLiters(batch.currentLiters.toString());
+    const calculatedProofGallons = literToProofGallon(batch.currentLiters, batch.proof);
+    setBatchProofGallons(calculatedProofGallons.toString());
+    setBatchNotes(batch.notes || "");
+    
+    setNewBatchOpen(true);
+  };
+  
+  const handleDeleteBatchPrompt = (batchId: string) => {
+    setBatchToDelete(batchId);
+    setDeleteBatchDialogOpen(true);
+  };
+  
+  const handleDeleteBatchConfirm = () => {
+    if (!batchToDelete) return;
+    
+    deleteBatch(batchToDelete);
+    setBatches([...MOCK_BATCHES]);
+    toast.success("Batch deleted successfully");
+    
+    setDeleteBatchDialogOpen(false);
+    setBatchToDelete(null);
   };
   
   const generateBatchNumber = (spiritId: string) => {
@@ -159,8 +240,29 @@ const Spirits = () => {
     const spirit = spirits.find(s => s.id === value);
     if (spirit) {
       setBatchProof(spirit.defaultProof.toString());
-      setBatchNumber(generateBatchNumber(value));
+      if (!editingBatchId) {
+        setBatchNumber(generateBatchNumber(value));
+      }
     }
+  };
+  
+  const resetSpiritForm = () => {
+    setEditingSpiritId(null);
+    setSpiritName("");
+    setSpiritType("whiskey");
+    setSpiritProof("80");
+    setSpiritDescription("");
+  };
+  
+  const resetBatchForm = () => {
+    setEditingBatchId(null);
+    setBatchSpiritId("");
+    setBatchNumber("");
+    setBatchProof("80");
+    setBatchDate(new Date());
+    setBatchLiters("0");
+    setBatchProofGallons("0");
+    setBatchNotes("");
   };
 
   return (
@@ -174,7 +276,10 @@ const Spirits = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          <Dialog open={newBatchOpen} onOpenChange={setNewBatchOpen}>
+          <Dialog open={newBatchOpen} onOpenChange={(open) => {
+            setNewBatchOpen(open);
+            if (!open) resetBatchForm();
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -183,9 +288,9 @@ const Spirits = () => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[525px]">
               <DialogHeader>
-                <DialogTitle>Create New Batch</DialogTitle>
+                <DialogTitle>{editingBatchId ? "Edit Batch" : "Create New Batch"}</DialogTitle>
                 <DialogDescription>
-                  Add a new batch of spirit to track production
+                  {editingBatchId ? "Edit existing batch details" : "Add a new batch of spirit to track production"}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -290,17 +395,23 @@ const Spirits = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setNewBatchOpen(false)}>
+                <Button variant="outline" onClick={() => {
+                  resetBatchForm();
+                  setNewBatchOpen(false);
+                }}>
                   Cancel
                 </Button>
                 <Button onClick={handleAddBatch}>
-                  Create Batch
+                  {editingBatchId ? "Save Changes" : "Create Batch"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
           
-          <Dialog open={newSpiritOpen} onOpenChange={setNewSpiritOpen}>
+          <Dialog open={newSpiritOpen} onOpenChange={(open) => {
+            setNewSpiritOpen(open);
+            if (!open) resetSpiritForm();
+          }}>
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Plus className="mr-2 h-4 w-4" />
@@ -309,9 +420,9 @@ const Spirits = () => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[525px]">
               <DialogHeader>
-                <DialogTitle>Create New Spirit</DialogTitle>
+                <DialogTitle>{editingSpiritId ? "Edit Spirit" : "Create New Spirit"}</DialogTitle>
                 <DialogDescription>
-                  Add a new spirit product to your catalog
+                  {editingSpiritId ? "Edit existing spirit details" : "Add a new spirit product to your catalog"}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -371,11 +482,14 @@ const Spirits = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setNewSpiritOpen(false)}>
+                <Button variant="outline" onClick={() => {
+                  resetSpiritForm();
+                  setNewSpiritOpen(false);
+                }}>
                   Cancel
                 </Button>
                 <Button onClick={handleAddSpirit}>
-                  Create Spirit
+                  {editingSpiritId ? "Save Changes" : "Create Spirit"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -399,10 +513,27 @@ const Spirits = () => {
               spirits.map(spirit => (
                 <Card key={spirit.id} className="overflow-hidden">
                   <CardHeader className="pb-2">
-                    <CardTitle>{spirit.name}</CardTitle>
-                    <CardDescription className="capitalize">
-                      {spirit.type} | {spirit.defaultProof} proof
-                    </CardDescription>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle>{spirit.name}</CardTitle>
+                        <CardDescription className="capitalize">
+                          {spirit.type} | {spirit.defaultProof} proof
+                        </CardDescription>
+                      </div>
+                      <div className="flex space-x-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditSpirit(spirit.id)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive"
+                          onClick={() => handleDeleteSpiritPrompt(spirit.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="pb-0">
                     {spirit.description && (
@@ -423,26 +554,17 @@ const Spirits = () => {
                         View Batches
                       </Button>
                       
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button size="sm">
-                            New Batch
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[525px]">
-                          <DialogHeader>
-                            <DialogTitle>Create New Batch of {spirit.name}</DialogTitle>
-                            <DialogDescription>
-                              Add a new batch to track production
-                            </DialogDescription>
-                          </DialogHeader>
-                          {/* Form would go here, similar to the one above */}
-                          <DialogFooter>
-                            <Button variant="outline">Cancel</Button>
-                            <Button>Create Batch</Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                      <Button 
+                        size="sm"
+                        onClick={() => {
+                          setBatchSpiritId(spirit.id);
+                          setBatchProof(spirit.defaultProof.toString());
+                          setBatchNumber(generateBatchNumber(spirit.id));
+                          setNewBatchOpen(true);
+                        }}
+                      >
+                        New Batch
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -528,11 +650,24 @@ const Spirits = () => {
                               </div>
                             </td>
                             <td className="p-4">
-                              <Button variant="outline" size="sm" className="mr-2" asChild>
-                                <a href={`/operations?batchId=${batch.id}`}>
-                                  Log Operation
-                                </a>
-                              </Button>
+                              <div className="flex items-center space-x-2">
+                                <Button variant="ghost" size="icon" onClick={() => handleEditBatch(batch.id)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="text-destructive"
+                                  onClick={() => handleDeleteBatchPrompt(batch.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="sm" asChild>
+                                  <a href={`/operations?batchId=${batch.id}`}>
+                                    Log Op
+                                  </a>
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -545,6 +680,50 @@ const Spirits = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Delete Spirit Confirmation */}
+      <AlertDialog open={deleteSpiritDialogOpen} onOpenChange={setDeleteSpiritDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Spirit</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the spirit and cannot be undone.
+              Any batches associated with this spirit may become orphaned.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSpiritToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteSpiritConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Delete Batch Confirmation */}
+      <AlertDialog open={deleteBatchDialogOpen} onOpenChange={setDeleteBatchDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Batch</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the batch and cannot be undone.
+              Any operations associated with this batch may become orphaned.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBatchToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteBatchConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

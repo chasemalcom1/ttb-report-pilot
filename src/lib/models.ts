@@ -28,6 +28,20 @@ export function addSpirit(spirit: Spirit): void {
   console.info('Adding new spirit:', newSpirit);
 }
 
+export function updateSpirit(updatedSpirit: Spirit): void {
+  MOCK_SPIRITS = MOCK_SPIRITS.map(spirit => 
+    spirit.id === updatedSpirit.id ? updatedSpirit : spirit
+  );
+  saveToLocalStorage('spirits', MOCK_SPIRITS);
+  console.info('Updated spirit:', updatedSpirit);
+}
+
+export function deleteSpirit(spiritId: string): void {
+  MOCK_SPIRITS = MOCK_SPIRITS.filter(spirit => spirit.id !== spiritId);
+  saveToLocalStorage('spirits', MOCK_SPIRITS);
+  console.info('Deleted spirit:', spiritId);
+}
+
 export function addBatch(batch: Batch): void {
   const newBatch = { 
     ...batch, 
@@ -39,6 +53,20 @@ export function addBatch(batch: Batch): void {
   console.info('Adding new batch:', newBatch);
 }
 
+export function updateBatch(updatedBatch: Batch): void {
+  MOCK_BATCHES = MOCK_BATCHES.map(batch => 
+    batch.id === updatedBatch.id ? updatedBatch : batch
+  );
+  saveToLocalStorage('batches', MOCK_BATCHES);
+  console.info('Updated batch:', updatedBatch);
+}
+
+export function deleteBatch(batchId: string): void {
+  MOCK_BATCHES = MOCK_BATCHES.filter(batch => batch.id !== batchId);
+  saveToLocalStorage('batches', MOCK_BATCHES);
+  console.info('Deleted batch:', batchId);
+}
+
 export function addOperation(operation: Operation): void {
   const newOperation = { 
     ...operation, 
@@ -48,4 +76,18 @@ export function addOperation(operation: Operation): void {
   MOCK_OPERATIONS = [...MOCK_OPERATIONS, newOperation];
   saveToLocalStorage('operations', MOCK_OPERATIONS);
   console.info('Adding new operation:', newOperation);
+}
+
+export function updateOperation(updatedOperation: Operation): void {
+  MOCK_OPERATIONS = MOCK_OPERATIONS.map(operation => 
+    operation.id === updatedOperation.id ? updatedOperation : operation
+  );
+  saveToLocalStorage('operations', MOCK_OPERATIONS);
+  console.info('Updated operation:', updatedOperation);
+}
+
+export function deleteOperation(operationId: string): void {
+  MOCK_OPERATIONS = MOCK_OPERATIONS.filter(operation => operation.id !== operationId);
+  saveToLocalStorage('operations', MOCK_OPERATIONS);
+  console.info('Deleted operation:', operationId);
 }

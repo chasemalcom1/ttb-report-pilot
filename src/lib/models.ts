@@ -1,4 +1,3 @@
-
 // Spirit and batch types
 export type SpiritType = 'whiskey' | 'vodka' | 'gin' | 'rum' | 'tequila' | 'brandy' | 'liqueur' | 'wine' | 'beer' | 'other';
 
@@ -202,7 +201,7 @@ const INITIAL_MOCK_OPERATIONS: Operation[] = [
 ];
 
 // Get data from local storage or use initial data
-function getFromLocalStorage<T>(key: string, initialData: T[]): T[] {
+export function getFromLocalStorage<T>(key: string, initialData: T[]): T[] {
   try {
     const storedData = localStorage.getItem(key);
     if (storedData) {
@@ -222,7 +221,7 @@ function getFromLocalStorage<T>(key: string, initialData: T[]): T[] {
 }
 
 // Save data to local storage
-function saveToLocalStorage<T>(key: string, data: T[]): void {
+export function saveToLocalStorage<T>(key: string, data: T[]): void {
   try {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
@@ -254,21 +253,36 @@ export const MOCK_REPORTS: Report[] = [
 
 // Helper functions to add new items and persist them
 export function addSpirit(spirit: Spirit): void {
-  MOCK_SPIRITS = [...MOCK_SPIRITS, spirit];
+  const newSpirit = { 
+    ...spirit, 
+    id: crypto.randomUUID() || `spirit-${Date.now()}`,
+    createdAt: new Date() 
+  };
+  MOCK_SPIRITS = [...MOCK_SPIRITS, newSpirit];
   saveToLocalStorage('spirits', MOCK_SPIRITS);
-  console.info('Adding new spirit:', spirit);
+  console.info('Adding new spirit:', newSpirit);
 }
 
 export function addBatch(batch: Batch): void {
-  MOCK_BATCHES = [...MOCK_BATCHES, batch];
+  const newBatch = { 
+    ...batch, 
+    id: crypto.randomUUID() || `batch-${Date.now()}`,
+    createdAt: new Date() 
+  };
+  MOCK_BATCHES = [...MOCK_BATCHES, newBatch];
   saveToLocalStorage('batches', MOCK_BATCHES);
-  console.info('Adding new batch:', batch);
+  console.info('Adding new batch:', newBatch);
 }
 
 export function addOperation(operation: Operation): void {
-  MOCK_OPERATIONS = [...MOCK_OPERATIONS, operation];
+  const newOperation = { 
+    ...operation, 
+    id: crypto.randomUUID() || `operation-${Date.now()}`,
+    createdAt: new Date() 
+  };
+  MOCK_OPERATIONS = [...MOCK_OPERATIONS, newOperation];
   saveToLocalStorage('operations', MOCK_OPERATIONS);
-  console.info('Adding new operation:', operation);
+  console.info('Adding new operation:', newOperation);
 }
 
 // Utility functions for calculations

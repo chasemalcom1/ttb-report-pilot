@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,34 +33,133 @@ const Report5110_11 = () => {
   const spiritReceived = sumOperationsByType(MOCK_OPERATIONS, 'transfer_in', startDate, endDate);
   const spiritBottled = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startDate, endDate);
   
+  // Generate PDF content for download
+  const generatePDFContent = () => {
+    // In a real app, this would create a proper PDF
+    // For now, we'll generate a data URL with minimal content
+    const content = `
+      TTB FORM 5110.11 - Monthly Report of Storage Operations
+      
+      Period: ${format(reportPeriod, "MMMM yyyy")}
+      Registration Number: ${registrationNumber}
+      Proprietor: ${proprietorName}
+      Address: ${proprietorAddress}
+      
+      Summary:
+      - Beginning Inventory: 310.2 proof gallons
+      - Deposited in storage: ${spiritProduced.toFixed(1)} proof gallons
+      - Received in storage: ${spiritReceived.toFixed(1)} proof gallons
+      - Withdrawn from storage: ${spiritBottled.toFixed(1)} proof gallons
+      - Loss in storage: 1.8 proof gallons
+      - Ending inventory: ${(310.2 + spiritProduced + spiritReceived - spiritBottled - 1.8).toFixed(1)} proof gallons
+    `;
+    
+    // Convert to data URL for download (in a real app, this would be a PDF)
+    return 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
+  };
+  
   const handleDownloadPDF = () => {
     // Generate PDF file name
-    const fileName = `TTB_5110_11_${format(reportPeriod, "yyyy-MM")}.pdf`;
+    const fileName = `TTB_5110_11_${format(reportPeriod, "yyyy-MM")}.txt`;
     
     toast.success("Downloading TTB Form 5110.11", {
       description: `Downloading ${fileName}`
     });
     
-    // In a real implementation, this would generate and download the PDF
-    setTimeout(() => {
-      const link = document.createElement("a");
-      // This would be a real PDF URL in production
-      link.href = "#";
-      link.download = fileName;
-      document.body.appendChild(link);
-      // Simulate download
-      toast.info("Download complete!");
-      document.body.removeChild(link);
-    }, 1500);
+    // Create an actual download link
+    const dataUrl = generatePDFContent();
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Download complete!", {
+      description: `${fileName} has been downloaded to your computer`
+    });
   };
   
   const handlePrintReport = () => {
     toast.success("Preparing TTB Form 5110.11 for printing", {
       description: "Opening print dialog..."
     });
-    // In a real implementation, this would open the print dialog with formatted content
+    
+    // Store current document content
+    const originalContent = document.body.innerHTML;
+    
+    // Create printable content
+    const printContent = `
+      <div style="padding: 20px; font-family: Arial, sans-serif;">
+        <h1 style="text-align: center;">TTB FORM 5110.11</h1>
+        <h2 style="text-align: center;">Monthly Report of Storage Operations</h2>
+        
+        <div style="margin: 20px 0;">
+          <p><strong>Period:</strong> ${format(reportPeriod, "MMMM yyyy")}</p>
+          <p><strong>Registration Number:</strong> ${registrationNumber}</p>
+          <p><strong>Proprietor:</strong> ${proprietorName}</p>
+          <p><strong>Address:</strong> ${proprietorAddress}</p>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <thead>
+            <tr style="background-color: #f2f2f2;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Description</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Proof Gallons</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">1. Beginning inventory</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">310.2</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">2. Deposited in storage</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${spiritProduced.toFixed(1)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">3. Received in storage</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${spiritReceived.toFixed(1)}</td>
+            </tr>
+            <tr style="background-color: #f2f2f2;">
+              <td style="border: 1px solid #ddd; padding: 8px;"><strong>4. Total (Lines 1, 2 & 3)</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(310.2 + spiritProduced + spiritReceived).toFixed(1)}</strong></td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">5. Withdrawn from storage</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${spiritBottled.toFixed(1)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">6. Loss in storage</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">1.8</td>
+            </tr>
+            <tr style="background-color: #f2f2f2;">
+              <td style="border: 1px solid #ddd; padding: 8px;"><strong>7. Total removed (Lines 5 & 6)</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(spiritBottled + 1.8).toFixed(1)}</strong></td>
+            </tr>
+            <tr style="background-color: #e6e6e6;">
+              <td style="border: 1px solid #ddd; padding: 8px;"><strong>8. Ending inventory (Line 4 minus Line 7)</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(310.2 + spiritProduced + spiritReceived - spiritBottled - 1.8).toFixed(1)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    // Replace document content for printing
+    document.body.innerHTML = printContent;
+    
+    // Print
     setTimeout(() => {
       window.print();
+      
+      // Restore original content
+      document.body.innerHTML = originalContent;
+      
+      // Force page reload to properly restore all handlers after print
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }, 500);
   };
 
@@ -376,4 +474,3 @@ const Report5110_11 = () => {
 };
 
 export default Report5110_11;
-

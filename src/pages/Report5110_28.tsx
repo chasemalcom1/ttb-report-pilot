@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import CalendarIcon from "@/components/icons/CalendarIcon";
@@ -14,7 +13,7 @@ import { Download, FileText, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { 
-  MOCK_OPERATIONS, 
+  MOCK_OPERATIONS,
   sumOperationsByType
 } from "@/lib/models";
 import { toast } from "@/components/ui/sonner";
@@ -30,39 +29,123 @@ const Report5110_28 = () => {
   const startDate = startOfMonth(reportPeriod);
   const endDate = endOfMonth(reportPeriod);
   
-  // Calculate report summary values based on the operations
-  const productionTotal = sumOperationsByType(MOCK_OPERATIONS, 'production', startDate, endDate);
-  const bottlingTotal = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startDate, endDate);
-  const taxWithdrawalTotal = sumOperationsByType(MOCK_OPERATIONS, 'tax_withdrawal', startDate, endDate);
+  // Calculate report summary values from operations
+  const bottlingProduction = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startDate, endDate);
+  const taxWithdrawals = sumOperationsByType(MOCK_OPERATIONS, 'tax_withdrawal', startDate, endDate);
+  
+  // Generate PDF content for download
+  const generatePDFContent = () => {
+    // In a real app, this would create a proper PDF
+    // For now, we'll generate a data URL with minimal content
+    const content = `
+      TTB FORM 5110.28 - Monthly Report of Processing Operations
+      
+      Period: ${format(reportPeriod, "MMMM yyyy")}
+      Registration Number: ${registrationNumber}
+      Proprietor: ${proprietorName}
+      Address: ${proprietorAddress}
+      
+      Summary:
+      - Beginning inventory: 200.5 proof gallons
+      - Bottling production: ${bottlingProduction.toFixed(1)} proof gallons
+      - Tax withdrawals: ${taxWithdrawals.toFixed(1)} proof gallons
+      - Ending inventory: ${(200.5 + bottlingProduction - taxWithdrawals).toFixed(1)} proof gallons
+    `;
+    
+    // Convert to data URL for download (in a real app, this would be a PDF)
+    return 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
+  };
   
   const handleDownloadPDF = () => {
     // Generate PDF file name
-    const fileName = `TTB_5110_28_${format(reportPeriod, "yyyy-MM")}.pdf`;
+    const fileName = `TTB_5110_28_${format(reportPeriod, "yyyy-MM")}.txt`;
     
     toast.success("Downloading TTB Form 5110.28", {
       description: `Downloading ${fileName}`
     });
     
-    // In a real implementation, this would generate and download the PDF
-    setTimeout(() => {
-      const link = document.createElement("a");
-      // This would be a real PDF URL in production
-      link.href = "#";
-      link.download = fileName;
-      document.body.appendChild(link);
-      // Simulate download
-      toast.info("Download complete!");
-      document.body.removeChild(link);
-    }, 1500);
+    // Create an actual download link
+    const dataUrl = generatePDFContent();
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Download complete!", {
+      description: `${fileName} has been downloaded to your computer`
+    });
   };
   
   const handlePrintReport = () => {
     toast.success("Preparing TTB Form 5110.28 for printing", {
       description: "Opening print dialog..."
     });
-    // In a real implementation, this would open the print dialog with formatted content
+    
+    // Store current document content
+    const originalContent = document.body.innerHTML;
+    
+    // Create printable content
+    const printContent = `
+      <div style="padding: 20px; font-family: Arial, sans-serif;">
+        <h1 style="text-align: center;">TTB FORM 5110.28</h1>
+        <h2 style="text-align: center;">Monthly Report of Processing Operations</h2>
+        
+        <div style="margin: 20px 0;">
+          <p><strong>Period:</strong> ${format(reportPeriod, "MMMM yyyy")}</p>
+          <p><strong>Registration Number:</strong> ${registrationNumber}</p>
+          <p><strong>Proprietor:</strong> ${proprietorName}</p>
+          <p><strong>Address:</strong> ${proprietorAddress}</p>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <thead>
+            <tr style="background-color: #f2f2f2;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Description</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Proof Gallons</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">1. Beginning inventory</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">200.5</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">2. Bottling production</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${bottlingProduction.toFixed(1)}</td>
+            </tr>
+            <tr style="background-color: #f2f2f2;">
+              <td style="border: 1px solid #ddd; padding: 8px;"><strong>3. Total (Lines 1 & 2)</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(200.5 + bottlingProduction).toFixed(1)}</strong></td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">4. Tax withdrawals</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${taxWithdrawals.toFixed(1)}</td>
+            </tr>
+            <tr style="background-color: #e6e6e6;">
+              <td style="border: 1px solid #ddd; padding: 8px;"><strong>5. Ending inventory (Line 3 minus Line 4)</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(200.5 + bottlingProduction - taxWithdrawals).toFixed(1)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    // Replace document content for printing
+    document.body.innerHTML = printContent;
+    
+    // Print
     setTimeout(() => {
       window.print();
+      
+      // Restore original content
+      document.body.innerHTML = originalContent;
+      
+      // Force page reload to properly restore all handlers after print
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }, 500);
   };
 
@@ -72,7 +155,7 @@ const Report5110_28 = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Form 5110.28</h1>
           <p className="text-muted-foreground">
-            Monthly Report of Processing Operations (Denaturing Facility)
+            Monthly Report of Processing Operations
           </p>
         </div>
         
@@ -103,7 +186,7 @@ const Report5110_28 = () => {
           <Tabs defaultValue="report">
             <TabsList className="mb-6">
               <TabsTrigger value="report">Report</TabsTrigger>
-              <TabsTrigger value="info">Facility Information</TabsTrigger>
+              <TabsTrigger value="info">Processing Information</TabsTrigger>
               <TabsTrigger value="operations">Operations Detail</TabsTrigger>
             </TabsList>
             
@@ -156,7 +239,7 @@ const Report5110_28 = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="proprietorAddress">Facility Address</Label>
+                  <Label htmlFor="proprietorAddress">Processing Facility Address</Label>
                   <Input
                     id="proprietorAddress"
                     value={proprietorAddress}
@@ -209,12 +292,12 @@ const Report5110_28 = () => {
                         <td className="p-3">
                           <div className="font-medium">1. Beginning inventory</div>
                           <div className="text-xs text-muted-foreground">
-                            On hand beginning of month
+                            Spirits in processing beginning of month
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value="182.5"
+                            value="200.5"
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -223,76 +306,51 @@ const Report5110_28 = () => {
                       
                       <tr className="border-b">
                         <td className="p-3">
-                          <div className="font-medium">2. Received for processing</div>
+                          <div className="font-medium">2. Bottling production</div>
                           <div className="text-xs text-muted-foreground">
-                            Total received during month
+                            Spirits processed for bottling
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={productionTotal.toFixed(1)}
+                            value={bottlingProduction.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
                         </td>
                       </tr>
                       
-                      <tr className="border-b">
-                        <td className="p-3">
-                          <div className="font-medium">3. Total (Lines 1 & 2)</div>
+                      <tr className="border-b bg-muted/20">
+                        <td className="p-3 font-medium">
+                          3. Total (Lines 1 & 2)
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(182.5 + productionTotal).toFixed(1)}
+                          {(200.5 + bottlingProduction).toFixed(1)}
                         </td>
                       </tr>
                       
                       <tr className="border-b">
                         <td className="p-3">
-                          <div className="font-medium">4. Processed/Denatured</div>
+                          <div className="font-medium">4. Tax withdrawals</div>
                           <div className="text-xs text-muted-foreground">
-                            Total processed this month
+                            Spirits withdrawn for tax-paid distribution
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={bottlingTotal.toFixed(1)}
+                            value={taxWithdrawals.toFixed(1)}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
-                        </td>
-                      </tr>
-                      
-                      <tr className="border-b">
-                        <td className="p-3">
-                          <div className="font-medium">5. Tax withdrawal</div>
-                          <div className="text-xs text-muted-foreground">
-                            Withdrawn on determination of tax
-                          </div>
-                        </td>
-                        <td className="p-3 text-right">
-                          <Input 
-                            value={taxWithdrawalTotal.toFixed(1)}
-                            readOnly
-                            className="text-right w-28 bg-muted inline-block"
-                          />
-                        </td>
-                      </tr>
-                      
-                      <tr className="border-b">
-                        <td className="p-3">
-                          <div className="font-medium">6. Total (Lines 4 & 5)</div>
-                        </td>
-                        <td className="p-3 text-right font-medium">
-                          {(bottlingTotal + taxWithdrawalTotal).toFixed(1)}
                         </td>
                       </tr>
                       
                       <tr className="border-b bg-muted/50">
                         <td className="p-3 font-bold">
-                          7. Ending inventory (Line 3 minus Line 6)
+                          5. Ending inventory (Line 3 minus Line 4)
                         </td>
                         <td className="p-3 text-right font-bold">
-                          {(182.5 + productionTotal - bottlingTotal - taxWithdrawalTotal).toFixed(1)}
+                          {(200.5 + bottlingProduction - taxWithdrawals).toFixed(1)}
                         </td>
                       </tr>
                     </tbody>
@@ -323,7 +381,11 @@ const Report5110_28 = () => {
                     </thead>
                     <tbody>
                       {MOCK_OPERATIONS
-                        .filter(op => op.date >= startDate && op.date <= endDate)
+                        .filter(op => 
+                          (op.type === 'bottling' || op.type === 'tax_withdrawal') && 
+                          op.date >= startDate && 
+                          op.date <= endDate
+                        )
                         .sort((a, b) => a.date.getTime() - b.date.getTime())
                         .map(op => (
                           <tr key={op.id} className="border-b">
@@ -336,7 +398,11 @@ const Report5110_28 = () => {
                             <td className="p-3 text-right">{op.proofGallons.toFixed(1)}</td>
                           </tr>
                         ))}
-                      {MOCK_OPERATIONS.filter(op => op.date >= startDate && op.date <= endDate).length === 0 && (
+                      {MOCK_OPERATIONS.filter(op => 
+                        (op.type === 'bottling' || op.type === 'tax_withdrawal') && 
+                        op.date >= startDate && 
+                        op.date <= endDate
+                      ).length === 0 && (
                         <tr>
                           <td colSpan={7} className="p-4 text-center text-muted-foreground">
                             No operations recorded for this period
@@ -361,4 +427,3 @@ const Report5110_28 = () => {
 };
 
 export default Report5110_28;
-

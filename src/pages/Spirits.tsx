@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,9 @@ import {
   MOCK_SPIRITS, 
   MOCK_BATCHES, 
   SpiritType,
-  literToProofGallon
+  literToProofGallon,
+  addSpirit,
+  addBatch
 } from "@/lib/models";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -41,9 +42,17 @@ const Spirits = () => {
   
   // Display state
   const [selectedSpiritId, setSelectedSpiritId] = useState<string | null>(null);
+  const [spirits, setSpirits] = useState([...MOCK_SPIRITS]);
+  const [batches, setBatches] = useState([...MOCK_BATCHES]);
   
-  const spirits = [...MOCK_SPIRITS];
-  const batches = [...MOCK_BATCHES].filter(batch => 
+  // Refresh data when component mounts or after adding items
+  useEffect(() => {
+    setSpirits([...MOCK_SPIRITS]);
+    setBatches([...MOCK_BATCHES]);
+  }, []);
+  
+  // Filter batches if a spirit is selected
+  const filteredBatches = batches.filter(batch => 
     selectedSpiritId ? batch.spiritId === selectedSpiritId : true
   );
   
@@ -70,7 +79,7 @@ const Spirits = () => {
     }
     
     const newSpirit = {
-      id: `temp-${Date.now()}`,
+      id: `spirit-${Date.now()}`,
       name: spiritName,
       type: spiritType,
       defaultProof: Number(spiritProof),
@@ -79,8 +88,11 @@ const Spirits = () => {
       createdAt: new Date(),
     };
     
-    // We would normally send this to the server
-    console.log("Adding new spirit:", newSpirit);
+    // Add to model and local storage
+    addSpirit(newSpirit);
+    
+    // Update local state
+    setSpirits([...MOCK_SPIRITS]);
     
     toast.success(`Spirit "${spiritName}" added successfully`);
     
@@ -99,7 +111,7 @@ const Spirits = () => {
     }
     
     const newBatch = {
-      id: `temp-${Date.now()}`,
+      id: `batch-${Date.now()}`,
       spiritId: batchSpiritId,
       batchNumber,
       productionDate: batchDate,
@@ -111,8 +123,11 @@ const Spirits = () => {
       createdAt: new Date(),
     };
     
-    // We would normally send this to the server
-    console.log("Adding new batch:", newBatch);
+    // Add to model and local storage
+    addBatch(newBatch);
+    
+    // Update local state
+    setBatches([...MOCK_BATCHES]);
     
     toast.success(`Batch "${batchNumber}" added successfully`);
     
@@ -376,57 +391,63 @@ const Spirits = () => {
         
         <TabsContent value="spirits" className="space-y-6">
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {spirits.map(spirit => (
-              <Card key={spirit.id} className="overflow-hidden">
-                <CardHeader className="pb-2">
-                  <CardTitle>{spirit.name}</CardTitle>
-                  <CardDescription className="capitalize">
-                    {spirit.type} | {spirit.defaultProof} proof
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-0">
-                  {spirit.description && (
-                    <p className="text-sm mb-4">{spirit.description}</p>
-                  )}
-                  
-                  <div className="text-sm text-muted-foreground mb-4">
-                    <p>Created: {format(spirit.createdAt, "MMMM d, yyyy")}</p>
-                    <p>Active Batches: {batches.filter(b => b.spiritId === spirit.id).length}</p>
-                  </div>
-                  
-                  <div className="flex justify-between pt-4 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedSpiritId(spirit.id)}
-                    >
-                      View Batches
-                    </Button>
+            {spirits.length === 0 ? (
+              <div className="col-span-full text-center py-8 text-muted-foreground">
+                No spirits found. Create your first spirit to get started.
+              </div>
+            ) : (
+              spirits.map(spirit => (
+                <Card key={spirit.id} className="overflow-hidden">
+                  <CardHeader className="pb-2">
+                    <CardTitle>{spirit.name}</CardTitle>
+                    <CardDescription className="capitalize">
+                      {spirit.type} | {spirit.defaultProof} proof
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-0">
+                    {spirit.description && (
+                      <p className="text-sm mb-4">{spirit.description}</p>
+                    )}
                     
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm">
-                          New Batch
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[525px]">
-                        <DialogHeader>
-                          <DialogTitle>Create New Batch of {spirit.name}</DialogTitle>
-                          <DialogDescription>
-                            Add a new batch to track production
-                          </DialogDescription>
-                        </DialogHeader>
-                        {/* Form would go here, similar to the one above */}
-                        <DialogFooter>
-                          <Button variant="outline">Cancel</Button>
-                          <Button>Create Batch</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="text-sm text-muted-foreground mb-4">
+                      <p>Created: {format(spirit.createdAt, "MMMM d, yyyy")}</p>
+                      <p>Active Batches: {batches.filter(b => b.spiritId === spirit.id).length}</p>
+                    </div>
+                    
+                    <div className="flex justify-between pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedSpiritId(spirit.id)}
+                      >
+                        View Batches
+                      </Button>
+                      
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button size="sm">
+                            New Batch
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[525px]">
+                          <DialogHeader>
+                            <DialogTitle>Create New Batch of {spirit.name}</DialogTitle>
+                            <DialogDescription>
+                              Add a new batch to track production
+                            </DialogDescription>
+                          </DialogHeader>
+                          {/* Form would go here, similar to the one above */}
+                          <DialogFooter>
+                            <Button variant="outline">Cancel</Button>
+                            <Button>Create Batch</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
         
@@ -469,14 +490,14 @@ const Spirits = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {batches.length === 0 ? (
+                    {filteredBatches.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="h-24 text-center text-muted-foreground">
                           No batches found
                         </td>
                       </tr>
                     ) : (
-                      batches.map(batch => {
+                      filteredBatches.map(batch => {
                         const spirit = spirits.find(s => s.id === batch.spiritId);
                         
                         return (

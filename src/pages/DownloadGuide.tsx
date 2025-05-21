@@ -1,17 +1,14 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Monitor, LaptopMac } from "lucide-react";
+import { Download, Monitor, Laptop } from "lucide-react";
 
 const DownloadGuide = () => {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Download Guide</h1>
-        <p className="text-muted-foreground">
-          How to download and use your distillery management system
-        </p>
-      </div>
+      <h1 className="text-3xl font-bold tracking-tight">Download Guide</h1>
+      <p className="text-muted-foreground">
+        How to download and use your distillery management system
+      </p>
       
       <Card>
         <CardHeader>
@@ -147,7 +144,7 @@ const DownloadGuide = () => {
                 
                 <div className="rounded-md bg-amber-50 border border-amber-200 p-4 text-amber-700 mt-4">
                   <div className="flex items-start">
-                    <LaptopMac className="h-5 w-5 mt-0.5 mr-2" />
+                    <Laptop className="h-5 w-5 mt-0.5 mr-2" />
                     <div>
                       <p className="font-medium">Printing TTB Forms</p>
                       <p className="text-sm">

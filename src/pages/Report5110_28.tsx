@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,10 @@ import CalendarIcon from "@/components/icons/CalendarIcon";
 import { Download, FileText, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
-import { 
-  MOCK_OPERATIONS
-} from "@/lib/models";
-import { calculateInventory } from "@/lib/reportUtils";
+import { MOCK_OPERATIONS } from "@/lib/models";
+import { calculateProcessingOperations } from "@/lib/reportUtils";
+import { ttbPDFService, TTBFormData } from "@/lib/pdfService";
+import { useOperationUpdates } from "@/lib/operationSubscription";
 import { toast } from "@/components/ui/sonner";
 
 const Report5110_28 = () => {
@@ -35,59 +36,67 @@ const Report5110_28 = () => {
   const endDate = endOfMonth(reportPeriod);
   
   // Update inventory calculations when operations or report period changes
-  useEffect(() => {
-    const calculatedInventory = calculateInventory(startDate, endDate, 200.5);
-    setInventory({
-      beginningInventory: 200.5,
-      bottling: calculatedInventory.bottling,
-      taxWithdrawal: calculatedInventory.taxWithdrawal,
-      endingInventory: 200.5 + calculatedInventory.bottling - calculatedInventory.taxWithdrawal
-    });
-  }, [reportPeriod, MOCK_OPERATIONS, startDate, endDate]);
-  
-  // Generate PDF content for download
-  const generatePDFContent = () => {
-    // In a real app, this would create a proper PDF
-    // For now, we'll generate a data URL with minimal content
-    const content = `
-      TTB FORM 5110.28 - Monthly Report of Processing Operations
-      
-      Period: ${format(reportPeriod, "MMMM yyyy")}
-      Registration Number: ${registrationNumber}
-      Proprietor: ${proprietorName}
-      Address: ${proprietorAddress}
-      
-      Summary:
-      - Beginning inventory: ${inventory.beginningInventory.toFixed(1)} proof gallons
-      - Bottling production: ${inventory.bottling.toFixed(1)} proof gallons
-      - Tax withdrawals: ${inventory.taxWithdrawal.toFixed(1)} proof gallons
-      - Ending inventory: ${inventory.endingInventory.toFixed(1)} proof gallons
-    `;
-    
-    // Convert to data URL for download (in a real app, this would be a PDF)
-    return 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
+  const updateInventory = () => {
+    const calculatedInventory = calculateProcessingOperations(startDate, endDate, 200.5);
+    setInventory(calculatedInventory);
   };
   
-  const handleDownloadPDF = () => {
-    // Generate PDF file name
-    const fileName = `TTB_5110_28_${format(reportPeriod, "yyyy-MM")}.txt`;
+  useEffect(() => {
+    updateInventory();
+  }, [reportPeriod, startDate, endDate]);
+  
+  // Subscribe to operation updates
+  useOperationUpdates(updateInventory);
+  
+  // Prepare form data for PDF generation
+  const prepareFormData = (): TTBFormData => {
+    const relevantOperations = MOCK_OPERATIONS
+      .filter(op => 
+        (op.type === 'bottling' || op.type === 'tax_withdrawal') && 
+        op.date >= startDate && 
+        op.date <= endDate
+      )
+      .map(op => ({
+        date: op.date,
+        type: op.type.replace('_', ' '),
+        spiritType: op.spiritId,
+        proofGallons: op.proofGallons,
+        proof: op.proof,
+        liters: op.liters
+      }));
     
-    toast.success("Downloading TTB Form 5110.28", {
-      description: `Downloading ${fileName}`
-    });
-    
-    // Create an actual download link
-    const dataUrl = generatePDFContent();
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success("Download complete!", {
-      description: `${fileName} has been downloaded to your computer`
-    });
+    return {
+      reportPeriod,
+      registrationNumber,
+      proprietorName,
+      proprietorAddress,
+      einNumber,
+      inventory,
+      operations: relevantOperations
+    };
+  };
+  
+  const handleDownloadPDF = async () => {
+    try {
+      toast.info("Generating TTB Form 5110.28 PDF...", {
+        description: "Please wait while we create your form"
+      });
+      
+      const formData = prepareFormData();
+      const pdfBytes = await ttbPDFService.generateForm5110_28(formData);
+      const fileName = `TTB_5110_28_${format(reportPeriod, "yyyy-MM")}.pdf`;
+      
+      ttbPDFService.downloadPDF(pdfBytes, fileName);
+      
+      toast.success("PDF Downloaded Successfully!", {
+        description: `${fileName} has been saved to your computer`
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error("Failed to generate PDF", {
+        description: "Please try again or contact support"
+      });
+    }
   };
   
   const handlePrintReport = () => {

@@ -11,18 +11,33 @@ export const literToProofGallon = (liters: number, proof: number): number => {
   return Math.round(proofGallons * 10) / 10;
 };
 
-export const sumOperationsByType = (
+// Overloaded function signatures to support both use cases
+export function sumOperationsByType(
+  operations: Operation[],
+  type: OperationType
+): number;
+
+export function sumOperationsByType(
   operations: Operation[],
   type: OperationType,
   startDate: Date,
   endDate: Date
-): number => {
-  return operations
-    .filter(
-      (op) => 
-        op.type === type && 
-        op.date >= startDate && 
-        op.date <= endDate
-    )
-    .reduce((sum, op) => sum + op.proofGallons, 0);
-};
+): number;
+
+export function sumOperationsByType(
+  operations: Operation[],
+  type: OperationType,
+  startDate?: Date,
+  endDate?: Date
+): number {
+  let filteredOperations = operations.filter(op => op.type === type);
+  
+  // If date range is provided, filter by date range
+  if (startDate && endDate) {
+    filteredOperations = filteredOperations.filter(
+      op => op.date >= startDate && op.date <= endDate
+    );
+  }
+  
+  return filteredOperations.reduce((sum, op) => sum + op.proofGallons, 0);
+}

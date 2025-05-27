@@ -3,6 +3,7 @@ import { Spirit, Batch, Operation, Report } from './types';
 import { INITIAL_MOCK_SPIRITS, INITIAL_MOCK_BATCHES, INITIAL_MOCK_OPERATIONS, INITIAL_MOCK_REPORTS } from './mockData';
 import { getFromLocalStorage, saveToLocalStorage } from './storageUtils';
 import { literToProofGallon, sumOperationsByType } from './calculationUtils';
+import { operationEventManager } from './operationSubscription';
 
 // Re-export types
 export type { SpiritType, OperationType, Spirit, Batch, Operation, Report } from './types';
@@ -76,6 +77,9 @@ export function addOperation(operation: Operation): void {
   MOCK_OPERATIONS = [...MOCK_OPERATIONS, newOperation];
   saveToLocalStorage('operations', MOCK_OPERATIONS);
   console.info('Adding new operation:', newOperation);
+  
+  // Notify subscribers that operations have been updated
+  operationEventManager.notify();
 }
 
 export function updateOperation(updatedOperation: Operation): void {
@@ -84,10 +88,16 @@ export function updateOperation(updatedOperation: Operation): void {
   );
   saveToLocalStorage('operations', MOCK_OPERATIONS);
   console.info('Updated operation:', updatedOperation);
+  
+  // Notify subscribers that operations have been updated
+  operationEventManager.notify();
 }
 
 export function deleteOperation(operationId: string): void {
   MOCK_OPERATIONS = MOCK_OPERATIONS.filter(operation => operation.id !== operationId);
   saveToLocalStorage('operations', MOCK_OPERATIONS);
   console.info('Deleted operation:', operationId);
+  
+  // Notify subscribers that operations have been updated
+  operationEventManager.notify();
 }

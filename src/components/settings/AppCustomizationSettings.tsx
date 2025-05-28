@@ -8,14 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useForm } from 'react-hook-form';
 import { toast } from '@/components/ui/sonner';
-import { Save, Palette, Upload, Sun, Moon } from 'lucide-react';
+import { Save, Palette, Upload, Moon, Sun } from 'lucide-react';
 
 interface AppCustomizationForm {
   theme: string;
-  darkMode: boolean;
-  logoUrl: string;
-  primaryColor: string;
-  sidebarShortcuts: string[];
+  companyLogo: string;
+  sidebarLayout: string;
+  compactMode: boolean;
+  showWelcomeTips: boolean;
 }
 
 export const AppCustomizationSettings = () => {
@@ -23,11 +23,11 @@ export const AppCustomizationSettings = () => {
 
   const form = useForm<AppCustomizationForm>({
     defaultValues: {
-      theme: 'default',
-      darkMode: false,
-      logoUrl: '',
-      primaryColor: '#0ea5e9',
-      sidebarShortcuts: ['dashboard', 'operations', 'spirits'],
+      theme: 'system',
+      companyLogo: '',
+      sidebarLayout: 'expanded',
+      compactMode: false,
+      showWelcomeTips: true,
     },
   });
 
@@ -44,8 +44,7 @@ export const AppCustomizationSettings = () => {
   };
 
   const handleLogoUpload = () => {
-    // In a real app, this would trigger a file upload dialog
-    toast.info('Logo upload functionality would be implemented here');
+    toast.success('Logo upload feature coming soon');
   };
 
   return (
@@ -56,27 +55,114 @@ export const AppCustomizationSettings = () => {
           App Customization
         </CardTitle>
         <CardDescription>
-          Customize the appearance and behavior of your application.
+          Customize the look and feel of your application interface.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Theme & Appearance</h3>
-              
+              <h3 className="text-lg font-medium">Theme Settings</h3>
               <FormField
                 control={form.control}
-                name="darkMode"
+                name="theme"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Color Theme</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select theme" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="light">
+                          <div className="flex items-center gap-2">
+                            <Sun className="h-4 w-4" />
+                            Light Mode
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="dark">
+                          <div className="flex items-center gap-2">
+                            <Moon className="h-4 w-4" />
+                            Dark Mode
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="system">System Default</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Choose between light, dark, or system preference
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Branding</h3>
+              <FormField
+                control={form.control}
+                name="companyLogo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company Logo</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormControl>
+                        <Input placeholder="No logo uploaded" {...field} readOnly />
+                      </FormControl>
+                      <Button type="button" onClick={handleLogoUpload} variant="outline">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload
+                      </Button>
+                    </div>
+                    <FormDescription>
+                      Upload your company logo (PNG, JPG, SVG - max 2MB)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Layout Settings</h3>
+              <FormField
+                control={form.control}
+                name="sidebarLayout"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sidebar Layout</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select layout" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="expanded">Always Expanded</SelectItem>
+                        <SelectItem value="collapsed">Always Collapsed</SelectItem>
+                        <SelectItem value="auto">Auto (based on screen size)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Control the default sidebar behavior
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="compactMode"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base flex items-center gap-2">
-                        {field.value ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                        Dark Mode
-                      </FormLabel>
+                      <FormLabel className="text-base">Compact Mode</FormLabel>
                       <FormDescription>
-                        Toggle between light and dark theme
+                        Use smaller spacing and condensed layouts
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -89,111 +175,40 @@ export const AppCustomizationSettings = () => {
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="theme"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Theme</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select theme" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="default">Default</SelectItem>
-                          <SelectItem value="professional">Professional</SelectItem>
-                          <SelectItem value="modern">Modern</SelectItem>
-                          <SelectItem value="classic">Classic</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="primaryColor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Primary Color</FormLabel>
-                      <FormControl>
-                        <div className="flex gap-2">
-                          <Input type="color" {...field} className="w-20 h-10" />
-                          <Input {...field} placeholder="#0ea5e9" className="flex-1" />
-                        </div>
-                      </FormControl>
-                      <FormDescription>Choose your brand's primary color</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Branding</h3>
-              
               <FormField
                 control={form.control}
-                name="logoUrl"
+                name="showWelcomeTips"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company Logo</FormLabel>
-                    <div className="space-y-2">
-                      <FormControl>
-                        <Input placeholder="Logo URL or upload a file" {...field} />
-                      </FormControl>
-                      <Button type="button" onClick={handleLogoUpload} variant="outline" size="sm">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Logo
-                      </Button>
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Show Welcome Tips</FormLabel>
+                      <FormDescription>
+                        Display helpful tips and onboarding guidance
+                      </FormDescription>
                     </div>
-                    <FormDescription>Upload your company logo or enter a URL</FormDescription>
-                    <FormMessage />
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Sidebar Configuration</h3>
-              <FormDescription>
-                Configure which items appear in your sidebar for quick access
-              </FormDescription>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {[
-                  { value: 'dashboard', label: 'Dashboard' },
-                  { value: 'operations', label: 'Operations' },
-                  { value: 'spirits', label: 'Spirits' },
-                  { value: 'reports', label: 'Reports' },
-                  { value: 'settings', label: 'Settings' },
-                  { value: 'inventory', label: 'Inventory' },
-                ].map((item) => (
-                  <div key={item.value} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={item.value}
-                      defaultChecked={form.getValues('sidebarShortcuts').includes(item.value)}
-                      onChange={(e) => {
-                        const current = form.getValues('sidebarShortcuts');
-                        if (e.target.checked) {
-                          form.setValue('sidebarShortcuts', [...current, item.value]);
-                        } else {
-                          form.setValue('sidebarShortcuts', current.filter(s => s !== item.value));
-                        }
-                      }}
-                      className="rounded border-gray-300"
-                    />
-                    <label htmlFor={item.value} className="text-sm font-medium">
-                      {item.label}
-                    </label>
-                  </div>
-                ))}
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Quick Actions</h4>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm">
+                  Reset to Defaults
+                </Button>
+                <Button type="button" variant="outline" size="sm">
+                  Import Theme
+                </Button>
+                <Button type="button" variant="outline" size="sm">
+                  Export Settings
+                </Button>
               </div>
             </div>
 

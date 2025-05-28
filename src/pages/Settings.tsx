@@ -42,17 +42,23 @@ const Settings = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
-          {tabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="flex items-center gap-2">
-              <tab.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground min-w-full">
+            {tabs.map((tab) => (
+              <TabsTrigger 
+                key={tab.value} 
+                value={tab.value} 
+                className="flex items-center gap-2 whitespace-nowrap px-3 py-1.5"
+              >
+                <tab.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         {tabs.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value} className="space-y-4">
+          <TabsContent key={tab.value} value={tab.value} className="space-y-4 mt-6">
             <tab.component />
           </TabsContent>
         ))}

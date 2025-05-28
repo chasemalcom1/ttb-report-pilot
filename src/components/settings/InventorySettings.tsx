@@ -7,27 +7,45 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import { toast } from '@/components/ui/sonner';
-import { Save, Package, Plus, X } from 'lucide-react';
+import { Save, Package, Plus, Trash2 } from 'lucide-react';
 
 interface InventoryForm {
-  defaultUnit: string;
-  bottleSizes: string[];
-  productCategories: string[];
-  warehouseLocations: string[];
+  primaryUnit: string;
+  secondaryUnit: string;
+  defaultBottleSize: string;
+  defaultABV: string;
+}
+
+interface ProductCategory {
+  id: string;
+  name: string;
+  defaultABV: string;
+}
+
+interface WarehouseLocation {
+  id: string;
+  name: string;
+  type: string;
 }
 
 export const InventorySettings = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [newBottleSize, setNewBottleSize] = useState('');
-  const [newCategory, setNewCategory] = useState('');
-  const [newLocation, setNewLocation] = useState('');
+  const [productCategories, setProductCategories] = useState<ProductCategory[]>([
+    { id: '1', name: 'Gin', defaultABV: '40' },
+    { id: '2', name: 'Vodka', defaultABV: '40' },
+    { id: '3', name: 'Rum', defaultABV: '40' },
+  ]);
+  const [warehouseLocations, setWarehouseLocations] = useState<WarehouseLocation[]>([
+    { id: '1', name: 'Main Distillery', type: 'distillery' },
+    { id: '2', name: 'Bonded Storage', type: 'bonded_storage' },
+  ]);
 
   const form = useForm<InventoryForm>({
     defaultValues: {
-      defaultUnit: 'proof_gallons',
-      bottleSizes: ['375ml', '750ml', '1L', '1.75L'],
-      productCategories: ['Whiskey', 'Vodka', 'Gin', 'Rum', 'Brandy'],
-      warehouseLocations: ['Main Distillery', 'Bonded Storage', 'Retail Location'],
+      primaryUnit: 'proof_gallons',
+      secondaryUnit: 'liters',
+      defaultBottleSize: '750',
+      defaultABV: '40',
     },
   });
 
@@ -43,43 +61,30 @@ export const InventorySettings = () => {
     }
   };
 
-  const addBottleSize = () => {
-    if (newBottleSize.trim()) {
-      const current = form.getValues('bottleSizes');
-      form.setValue('bottleSizes', [...current, newBottleSize.trim()]);
-      setNewBottleSize('');
-    }
+  const addProductCategory = () => {
+    const newCategory: ProductCategory = {
+      id: Date.now().toString(),
+      name: 'New Category',
+      defaultABV: '40',
+    };
+    setProductCategories([...productCategories, newCategory]);
   };
 
-  const removeBottleSize = (index: number) => {
-    const current = form.getValues('bottleSizes');
-    form.setValue('bottleSizes', current.filter((_, i) => i !== index));
+  const removeProductCategory = (id: string) => {
+    setProductCategories(productCategories.filter(cat => cat.id !== id));
   };
 
-  const addCategory = () => {
-    if (newCategory.trim()) {
-      const current = form.getValues('productCategories');
-      form.setValue('productCategories', [...current, newCategory.trim()]);
-      setNewCategory('');
-    }
+  const addWarehouseLocation = () => {
+    const newLocation: WarehouseLocation = {
+      id: Date.now().toString(),
+      name: 'New Location',
+      type: 'distillery',
+    };
+    setWarehouseLocations([...warehouseLocations, newLocation]);
   };
 
-  const removeCategory = (index: number) => {
-    const current = form.getValues('productCategories');
-    form.setValue('productCategories', current.filter((_, i) => i !== index));
-  };
-
-  const addLocation = () => {
-    if (newLocation.trim()) {
-      const current = form.getValues('warehouseLocations');
-      form.setValue('warehouseLocations', [...current, newLocation.trim()]);
-      setNewLocation('');
-    }
-  };
-
-  const removeLocation = (index: number) => {
-    const current = form.getValues('warehouseLocations');
-    form.setValue('warehouseLocations', current.filter((_, i) => i !== index));
+  const removeWarehouseLocation = (id: string) => {
+    setWarehouseLocations(warehouseLocations.filter(loc => loc.id !== id));
   };
 
   return (
@@ -90,123 +95,187 @@ export const InventorySettings = () => {
           Inventory & Production Settings
         </CardTitle>
         <CardDescription>
-          Configure units, bottle sizes, product categories, and warehouse locations.
+          Configure units of measure, product categories, and warehouse locations.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="defaultUnit"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Units of Measure</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select default unit" />
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Units of Measure</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="primaryUnit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Primary Unit</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select primary unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="proof_gallons">Proof Gallons</SelectItem>
+                          <SelectItem value="wine_gallons">Wine Gallons</SelectItem>
+                          <SelectItem value="liters">Liters</SelectItem>
+                          <SelectItem value="bottles">Bottles</SelectItem>
+                          <SelectItem value="cases">Cases</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="secondaryUnit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Secondary Unit</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select secondary unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="liters">Liters</SelectItem>
+                          <SelectItem value="bottles">Bottles</SelectItem>
+                          <SelectItem value="cases">Cases</SelectItem>
+                          <SelectItem value="proof_gallons">Proof Gallons</SelectItem>
+                          <SelectItem value="wine_gallons">Wine Gallons</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="defaultBottleSize"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default Bottle Size (ml)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="750" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="defaultABV"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default ABV (%)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="40" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Product Categories</h3>
+                <Button type="button" onClick={addProductCategory} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Category
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {productCategories.map((category) => (
+                  <div key={category.id} className="flex items-center gap-2 p-2 border rounded">
+                    <Input 
+                      value={category.name} 
+                      onChange={(e) => {
+                        const updated = productCategories.map(cat => 
+                          cat.id === category.id ? { ...cat, name: e.target.value } : cat
+                        );
+                        setProductCategories(updated);
+                      }}
+                      className="flex-1"
+                    />
+                    <Input 
+                      value={category.defaultABV}
+                      onChange={(e) => {
+                        const updated = productCategories.map(cat => 
+                          cat.id === category.id ? { ...cat, defaultABV: e.target.value } : cat
+                        );
+                        setProductCategories(updated);
+                      }}
+                      placeholder="ABV %"
+                      className="w-20"
+                    />
+                    <Button 
+                      type="button"
+                      onClick={() => removeProductCategory(category.id)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Warehouse Locations</h3>
+                <Button type="button" onClick={addWarehouseLocation} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Location
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {warehouseLocations.map((location) => (
+                  <div key={location.id} className="flex items-center gap-2 p-2 border rounded">
+                    <Input 
+                      value={location.name}
+                      onChange={(e) => {
+                        const updated = warehouseLocations.map(loc => 
+                          loc.id === location.id ? { ...loc, name: e.target.value } : loc
+                        );
+                        setWarehouseLocations(updated);
+                      }}
+                      className="flex-1"
+                    />
+                    <Select 
+                      value={location.type}
+                      onValueChange={(value) => {
+                        const updated = warehouseLocations.map(loc => 
+                          loc.id === location.id ? { ...loc, type: value } : loc
+                        );
+                        setWarehouseLocations(updated);
+                      }}
+                    >
+                      <SelectTrigger className="w-40">
+                        <SelectValue />
                       </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="proof_gallons">Proof Gallons</SelectItem>
-                      <SelectItem value="liters">Liters</SelectItem>
-                      <SelectItem value="bottles">Bottles</SelectItem>
-                      <SelectItem value="cases">Cases</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Bottle Sizes</h3>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add bottle size (e.g., 750ml)"
-                  value={newBottleSize}
-                  onChange={(e) => setNewBottleSize(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addBottleSize())}
-                />
-                <Button type="button" onClick={addBottleSize} size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {form.watch('bottleSizes').map((size, index) => (
-                  <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-md">
-                    <span className="text-sm">{size}</span>
-                    <Button
+                      <SelectContent>
+                        <SelectItem value="distillery">Distillery</SelectItem>
+                        <SelectItem value="bonded_storage">Bonded Storage</SelectItem>
+                        <SelectItem value="retail">Retail</SelectItem>
+                        <SelectItem value="warehouse">Warehouse</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button 
                       type="button"
-                      variant="ghost"
+                      onClick={() => removeWarehouseLocation(location.id)}
+                      variant="outline"
                       size="sm"
-                      onClick={() => removeBottleSize(index)}
-                      className="h-4 w-4 p-0"
                     >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Product Categories</h3>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add product category"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCategory())}
-                />
-                <Button type="button" onClick={addCategory} size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {form.watch('productCategories').map((category, index) => (
-                  <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-md">
-                    <span className="text-sm">{category}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeCategory(index)}
-                      className="h-4 w-4 p-0"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Warehouse Locations</h3>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add warehouse location"
-                  value={newLocation}
-                  onChange={(e) => setNewLocation(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addLocation())}
-                />
-                <Button type="button" onClick={addLocation} size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {form.watch('warehouseLocations').map((location, index) => (
-                  <div key={index} className="flex items-center gap-1 bg-muted px-3 py-1 rounded-md">
-                    <span className="text-sm">{location}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeLocation(index)}
-                      className="h-4 w-4 p-0"
-                    >
-                      <X className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}

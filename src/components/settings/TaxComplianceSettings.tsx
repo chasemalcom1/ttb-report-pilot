@@ -8,15 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { useForm } from 'react-hook-form';
 import { toast } from '@/components/ui/sonner';
-import { Save, FileText } from 'lucide-react';
+import { Save, FileText, AlertTriangle } from 'lucide-react';
 
 interface TaxComplianceForm {
-  stateExciseTaxRate: string;
+  stateExciseRate: string;
   autoCalculateTax: boolean;
   exportDutyRate: string;
   maxProofThreshold: string;
   lowInventoryThreshold: string;
-  customWarnings: boolean;
+  overdueReportWarning: boolean;
 }
 
 export const TaxComplianceSettings = () => {
@@ -24,12 +24,12 @@ export const TaxComplianceSettings = () => {
 
   const form = useForm<TaxComplianceForm>({
     defaultValues: {
-      stateExciseTaxRate: '3.30',
+      stateExciseRate: '2.50',
       autoCalculateTax: true,
       exportDutyRate: '0.00',
       maxProofThreshold: '10000',
       lowInventoryThreshold: '100',
-      customWarnings: true,
+      overdueReportWarning: true,
     },
   });
 
@@ -50,7 +50,7 @@ export const TaxComplianceSettings = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-          Taxes & Compliance
+          Tax & Compliance
         </CardTitle>
         <CardDescription>
           Configure tax rates, compliance thresholds, and warning settings.
@@ -61,21 +61,19 @@ export const TaxComplianceSettings = () => {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-lg font-medium">Tax Settings</h3>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="stateExciseTaxRate"
+                  name="stateExciseRate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State Excise Tax Rate (per proof gallon)</FormLabel>
+                      <FormLabel>State Excise Tax Rate ($ per proof gallon)</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Input placeholder="0.00" {...field} className="pl-6" />
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                        </div>
+                        <Input placeholder="2.50" {...field} />
                       </FormControl>
-                      <FormDescription>Enter the state excise tax rate per proof gallon</FormDescription>
+                      <FormDescription>
+                        Override default state excise tax rate
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -86,14 +84,13 @@ export const TaxComplianceSettings = () => {
                   name="exportDutyRate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Export Duty Rate (%)</FormLabel>
+                      <FormLabel>Export Duty Rate ($ per proof gallon)</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Input placeholder="0.00" {...field} className="pr-6" />
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
-                        </div>
+                        <Input placeholder="0.00" {...field} />
                       </FormControl>
-                      <FormDescription>Export duty rate as percentage</FormDescription>
+                      <FormDescription>
+                        Rate for products exported outside the US
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -108,7 +105,7 @@ export const TaxComplianceSettings = () => {
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">Auto-Calculate Tax Due</FormLabel>
                       <FormDescription>
-                        Automatically calculate tax amounts based on production and withdrawal data
+                        Automatically calculate tax obligations based on operations
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -123,19 +120,23 @@ export const TaxComplianceSettings = () => {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Warning Thresholds</h3>
-              
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Warning Thresholds
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="maxProofThreshold"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Proof Production (monthly)</FormLabel>
+                      <FormLabel>Max Proof Production per Month (gallons)</FormLabel>
                       <FormControl>
                         <Input placeholder="10000" {...field} />
                       </FormControl>
-                      <FormDescription>Warning threshold for monthly proof gallon production</FormDescription>
+                      <FormDescription>
+                        Warn when monthly production exceeds this limit
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -146,11 +147,13 @@ export const TaxComplianceSettings = () => {
                   name="lowInventoryThreshold"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Low Inventory Threshold</FormLabel>
+                      <FormLabel>Low Inventory Threshold (gallons)</FormLabel>
                       <FormControl>
                         <Input placeholder="100" {...field} />
                       </FormControl>
-                      <FormDescription>Warning when inventory falls below this amount</FormDescription>
+                      <FormDescription>
+                        Warn when inventory falls below this level
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -159,13 +162,13 @@ export const TaxComplianceSettings = () => {
 
               <FormField
                 control={form.control}
-                name="customWarnings"
+                name="overdueReportWarning"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Custom Warning Notifications</FormLabel>
+                      <FormLabel className="text-base">Overdue Report Warnings</FormLabel>
                       <FormDescription>
-                        Enable custom warnings for compliance thresholds and unusual activities
+                        Show warnings for overdue tax reports and filings
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -177,6 +180,16 @@ export const TaxComplianceSettings = () => {
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Compliance Notes</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Tax rates should be verified with current state regulations</li>
+                <li>• Federal excise tax is automatically calculated based on current rates</li>
+                <li>• Export duties may vary by destination country</li>
+                <li>• Consult with a tax professional for complex situations</li>
+              </ul>
             </div>
 
             <div className="flex justify-end">

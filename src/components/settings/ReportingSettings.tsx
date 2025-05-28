@@ -2,13 +2,13 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { toast } from '@/components/ui/sonner';
-import { Save, Calendar } from 'lucide-react';
+import { Save, Calendar, Bell } from 'lucide-react';
 
 interface ReportingForm {
   defaultPeriod: string;
@@ -27,7 +27,7 @@ export const ReportingSettings = () => {
     defaultValues: {
       defaultPeriod: 'monthly',
       timezone: 'America/New_York',
-      startDate: '2024-01-01',
+      startDate: new Date().toISOString().split('T')[0],
       emailReminders: true,
       inAppReminders: true,
       autoGenerate: false,
@@ -55,7 +55,7 @@ export const ReportingSettings = () => {
           Reporting Preferences
         </CardTitle>
         <CardDescription>
-          Configure your reporting defaults and notification preferences.
+          Configure default reporting periods, notifications, and output formats.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -102,6 +102,7 @@ export const ReportingSettings = () => {
                         <SelectItem value="America/Chicago">Central Time</SelectItem>
                         <SelectItem value="America/Denver">Mountain Time</SelectItem>
                         <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                        <SelectItem value="UTC">UTC</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -148,7 +149,10 @@ export const ReportingSettings = () => {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Notifications & Reminders</h3>
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notification Settings
+              </h3>
               
               <FormField
                 control={form.control}
@@ -157,9 +161,9 @@ export const ReportingSettings = () => {
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">Email Reminders</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        Receive email notifications for report due dates
-                      </div>
+                      <FormDescription>
+                        Receive email notifications for upcoming report due dates
+                      </FormDescription>
                     </div>
                     <FormControl>
                       <Switch
@@ -177,10 +181,10 @@ export const ReportingSettings = () => {
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">In-App Reminders</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        Show reminders within the application
-                      </div>
+                      <FormLabel className="text-base">In-App Notifications</FormLabel>
+                      <FormDescription>
+                        Show notification badges and alerts within the application
+                      </FormDescription>
                     </div>
                     <FormControl>
                       <Switch
@@ -199,9 +203,9 @@ export const ReportingSettings = () => {
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">Auto-Generate Reports</FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        Automatically generate reports at the end of each period
-                      </div>
+                      <FormDescription>
+                        Automatically generate reports on scheduled dates
+                      </FormDescription>
                     </div>
                     <FormControl>
                       <Switch

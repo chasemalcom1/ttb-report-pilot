@@ -16,10 +16,9 @@ import Spirits from "./pages/Spirits";
 import Report5110_40 from "./pages/Report5110_40";
 import Report5110_28 from "./pages/Report5110_28";
 import Report5110_11 from "./pages/Report5110_11";
+import Settings from "./pages/Settings";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
-
-const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -80,6 +79,14 @@ const App = () => (
               <AuthGuard>
                 <AppLayout>
                   <Report5110_11 />
+                </AppLayout>
+              </AuthGuard>
+            } />
+            
+            <Route path="/settings" element={
+              <AuthGuard allowedRoles={['admin']}>
+                <AppLayout>
+                  <Settings />
                 </AppLayout>
               </AuthGuard>
             } />

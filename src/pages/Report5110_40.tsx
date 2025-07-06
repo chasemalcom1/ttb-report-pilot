@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,40 +12,53 @@ import CalendarIcon from "@/components/icons/CalendarIcon";
 import { Download, FileText, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
+import { MOCK_OPERATIONS } from "@/lib/models";
 import { 
-  MOCK_OPERATIONS, 
-  sumOperationsByType
-} from "@/lib/models";
+  getOrCreateReport, 
+  saveReport, 
+  refreshReportInventory,
+  Report5110_40Data
+} from "@/lib/reportData";
+import { useOperationUpdates } from "@/lib/operationSubscription";
 import { toast } from "@/components/ui/sonner";
 
 const Report5110_40 = () => {
   const [reportPeriod, setReportPeriod] = useState<Date>(startOfMonth(subMonths(new Date(), 1)));
-  const [registrationNumber, setRegistrationNumber] = useState("DSP-NY-12345");
-  const [proprietorName, setProprietorName] = useState("Mountain Spirits Distillery");
-  const [proprietorAddress, setProprietorAddress] = useState("123 Main St, Springfield, NY 12345");
-  const [einNumber, setEinNumber] = useState("XX-XXXXXXX");
+  const [reportData, setReportData] = useState<Report5110_40Data | null>(null);
   
   // Create date range for the selected month
   const startDate = startOfMonth(reportPeriod);
   const endDate = endOfMonth(reportPeriod);
   
-  // Calculate report summary values
-  const productionTotal = sumOperationsByType(MOCK_OPERATIONS, 'production', startDate, endDate);
-  const bottlingTotal = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startDate, endDate);
-  const lossesTotal = sumOperationsByType(MOCK_OPERATIONS, 'loss', startDate, endDate);
-  const transferOutTotal = sumOperationsByType(MOCK_OPERATIONS, 'transfer_out', startDate, endDate);
-  const transferInTotal = sumOperationsByType(MOCK_OPERATIONS, 'transfer_in', startDate, endDate);
+  // Load or create report data
+  const loadReportData = () => {
+    const data = getOrCreateReport<Report5110_40Data>('5110-40', reportPeriod);
+    setReportData(data);
+  };
   
-  // Calculate beginning inventory (this would normally come from database)
-  const beginningInventory = 245.6;
+  // Update report data when period changes
+  useEffect(() => {
+    loadReportData();
+  }, [reportPeriod]);
   
-  // Calculate ending inventory
-  const endingInventory = beginningInventory + 
-                          productionTotal + 
-                          transferInTotal - 
-                          bottlingTotal - 
-                          transferOutTotal - 
-                          lossesTotal;
+  // Subscribe to operation updates and refresh inventory
+  const refreshData = () => {
+    if (reportData) {
+      const refreshedData = refreshReportInventory<Report5110_40Data>('5110-40', reportPeriod);
+      setReportData(refreshedData);
+    }
+  };
+  
+  useOperationUpdates(refreshData);
+  
+  // Save report data changes
+  const updateReportField = (field: keyof Report5110_40Data, value: any) => {
+    if (!reportData) return;
+    
+    const updatedData = { ...reportData, [field]: value };
+    setReportData(updatedData);
+    saveReport(updatedData);
+  };
   
   const handleDownloadPDF = () => {
     // Generate PDF file name
@@ -152,8 +165,8 @@ const Report5110_40 = () => {
                   <Label htmlFor="registrationNumber">Registration Number</Label>
                   <Input
                     id="registrationNumber"
-                    value={registrationNumber}
-                    onChange={(e) => setRegistrationNumber(e.target.value)}
+                    value={reportData?.registrationNumber || ""}
+                    onChange={(e) => updateReportField('registrationNumber', e.target.value)}
                     placeholder="e.g., DSP-XX-12345"
                   />
                 </div>
@@ -162,8 +175,8 @@ const Report5110_40 = () => {
                   <Label htmlFor="proprietorName">Proprietor Name</Label>
                   <Input
                     id="proprietorName"
-                    value={proprietorName}
-                    onChange={(e) => setProprietorName(e.target.value)}
+                    value={reportData?.proprietorName || ""}
+                    onChange={(e) => updateReportField('proprietorName', e.target.value)}
                   />
                 </div>
                 
@@ -171,8 +184,8 @@ const Report5110_40 = () => {
                   <Label htmlFor="proprietorAddress">Plant Address</Label>
                   <Input
                     id="proprietorAddress"
-                    value={proprietorAddress}
-                    onChange={(e) => setProprietorAddress(e.target.value)}
+                    value={reportData?.proprietorAddress || ""}
+                    onChange={(e) => updateReportField('proprietorAddress', e.target.value)}
                   />
                 </div>
                 
@@ -180,14 +193,19 @@ const Report5110_40 = () => {
                   <Label htmlFor="einNumber">EIN Number</Label>
                   <Input
                     id="einNumber"
-                    value={einNumber}
-                    onChange={(e) => setEinNumber(e.target.value)}
+                    value={reportData?.einNumber || ""}
+                    onChange={(e) => updateReportField('einNumber', e.target.value)}
                   />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="reportType">Report Type</Label>
-                  <Select defaultValue="original">
+                  <Select 
+                    value={reportData?.reportType || "original"}
+                    onValueChange={(value: 'original' | 'amended' | 'final') => 
+                      updateReportField('reportType', value)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -226,7 +244,7 @@ const Report5110_40 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={beginningInventory.toFixed(1)}
+                            value={reportData?.inventory.beginningInventory.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -242,7 +260,7 @@ const Report5110_40 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={productionTotal.toFixed(1)}
+                            value={reportData?.inventory.production.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -258,7 +276,7 @@ const Report5110_40 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={transferInTotal.toFixed(1)}
+                            value={reportData?.inventory.transferIn.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -270,7 +288,7 @@ const Report5110_40 = () => {
                           4. Total spirits available
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(beginningInventory + productionTotal + transferInTotal).toFixed(1)}
+                          {reportData ? (reportData.inventory.beginningInventory + reportData.inventory.production + reportData.inventory.transferIn).toFixed(1) : "0.0"}
                         </td>
                       </tr>
                       
@@ -283,7 +301,7 @@ const Report5110_40 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={bottlingTotal.toFixed(1)}
+                            value={reportData?.inventory.bottling.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -299,7 +317,7 @@ const Report5110_40 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={transferOutTotal.toFixed(1)}
+                            value={reportData?.inventory.transferOut.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -315,7 +333,7 @@ const Report5110_40 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={lossesTotal.toFixed(1)}
+                            value={reportData?.inventory.loss.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -327,7 +345,7 @@ const Report5110_40 = () => {
                           8. Total spirits disposed of
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(bottlingTotal + transferOutTotal + lossesTotal).toFixed(1)}
+                          {reportData ? (reportData.inventory.bottling + reportData.inventory.transferOut + reportData.inventory.loss).toFixed(1) : "0.0"}
                         </td>
                       </tr>
                       
@@ -336,7 +354,7 @@ const Report5110_40 = () => {
                           9. Ending inventory
                         </td>
                         <td className="p-3 text-right font-bold">
-                          {endingInventory.toFixed(1)}
+                          {reportData?.inventory.endingInventory.toFixed(1) || "0.0"}
                         </td>
                       </tr>
                     </tbody>

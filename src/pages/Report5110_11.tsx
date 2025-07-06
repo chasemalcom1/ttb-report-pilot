@@ -11,58 +11,75 @@ import CalendarIcon from "@/components/icons/CalendarIcon";
 import { Download, FileText, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
+import { MOCK_OPERATIONS } from "@/lib/models";
 import { 
-  MOCK_OPERATIONS
-} from "@/lib/models";
-import { calculateInventory } from "@/lib/reportUtils";
+  getOrCreateReport, 
+  saveReport, 
+  refreshReportInventory,
+  Report5110_11Data
+} from "@/lib/reportData";
+import { useOperationUpdates } from "@/lib/operationSubscription";
 import { toast } from "@/components/ui/sonner";
 
 const Report5110_11 = () => {
   const [reportPeriod, setReportPeriod] = useState<Date>(startOfMonth(subMonths(new Date(), 1)));
-  const [registrationNumber, setRegistrationNumber] = useState("DSP-NY-12345");
-  const [proprietorName, setProprietorName] = useState("Mountain Spirits Distillery");
-  const [proprietorAddress, setProprietorAddress] = useState("123 Main St, Springfield, NY 12345");
-  const [einNumber, setEinNumber] = useState("XX-XXXXXXX");
-  const [inventory, setInventory] = useState({
-    beginningInventory: 310.2,
-    production: 0,
-    transferIn: 0,
-    bottling: 0,
-    taxWithdrawal: 0,
-    transferOut: 0,
-    loss: 1.8,
-    endingInventory: 0
-  });
+  const [reportData, setReportData] = useState<Report5110_11Data | null>(null);
   
   // Create date range for the selected month
   const startDate = startOfMonth(reportPeriod);
   const endDate = endOfMonth(reportPeriod);
   
-  // Update inventory calculations when operations or report period changes
+  // Load or create report data
+  const loadReportData = () => {
+    const data = getOrCreateReport<Report5110_11Data>('5110-11', reportPeriod);
+    setReportData(data);
+  };
+  
+  // Update report data when period changes
   useEffect(() => {
-    const calculatedInventory = calculateInventory(startDate, endDate, 310.2);
-    setInventory(calculatedInventory);
-  }, [reportPeriod, MOCK_OPERATIONS, startDate, endDate]);
+    loadReportData();
+  }, [reportPeriod]);
+  
+  // Subscribe to operation updates and refresh inventory
+  const refreshData = () => {
+    if (reportData) {
+      const refreshedData = refreshReportInventory<Report5110_11Data>('5110-11', reportPeriod);
+      setReportData(refreshedData);
+    }
+  };
+  
+  useOperationUpdates(refreshData);
+  
+  // Save report data changes
+  const updateReportField = (field: keyof Report5110_11Data, value: any) => {
+    if (!reportData) return;
+    
+    const updatedData = { ...reportData, [field]: value };
+    setReportData(updatedData);
+    saveReport(updatedData);
+  };
   
   // Generate PDF content for download
   const generatePDFContent = () => {
+    if (!reportData?.inventory) return 'data:text/plain;charset=utf-8,No data available';
+    
     // In a real app, this would create a proper PDF
     // For now, we'll generate a data URL with minimal content
     const content = `
       TTB FORM 5110.11 - Monthly Report of Storage Operations
       
       Period: ${format(reportPeriod, "MMMM yyyy")}
-      Registration Number: ${registrationNumber}
-      Proprietor: ${proprietorName}
-      Address: ${proprietorAddress}
+      Registration Number: ${reportData.registrationNumber}
+      Proprietor: ${reportData.proprietorName}
+      Address: ${reportData.proprietorAddress}
       
       Summary:
-      - Beginning Inventory: ${inventory.beginningInventory.toFixed(1)} proof gallons
-      - Deposited in storage: ${inventory.production.toFixed(1)} proof gallons
-      - Received in storage: ${inventory.transferIn.toFixed(1)} proof gallons
-      - Withdrawn from storage: ${inventory.bottling.toFixed(1)} proof gallons
-      - Loss in storage: ${inventory.loss.toFixed(1)} proof gallons
-      - Ending inventory: ${inventory.endingInventory.toFixed(1)} proof gallons
+      - Beginning Inventory: ${reportData.inventory.beginningInventory.toFixed(1)} proof gallons
+      - Deposited in storage: ${reportData.inventory.production.toFixed(1)} proof gallons
+      - Received in storage: ${reportData.inventory.transferIn.toFixed(1)} proof gallons
+      - Withdrawn from storage: ${reportData.inventory.bottling.toFixed(1)} proof gallons
+      - Loss in storage: ${reportData.inventory.loss.toFixed(1)} proof gallons
+      - Ending inventory: ${reportData.inventory.endingInventory.toFixed(1)} proof gallons
     `;
     
     // Convert to data URL for download (in a real app, this would be a PDF)
@@ -107,9 +124,9 @@ const Report5110_11 = () => {
         
         <div style="margin: 20px 0;">
           <p><strong>Period:</strong> ${format(reportPeriod, "MMMM yyyy")}</p>
-          <p><strong>Registration Number:</strong> ${registrationNumber}</p>
-          <p><strong>Proprietor:</strong> ${proprietorName}</p>
-          <p><strong>Address:</strong> ${proprietorAddress}</p>
+          <p><strong>Registration Number:</strong> ${reportData?.registrationNumber || ""}</p>
+          <p><strong>Proprietor:</strong> ${reportData?.proprietorName || ""}</p>
+          <p><strong>Address:</strong> ${reportData?.proprietorAddress || ""}</p>
         </div>
         
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
@@ -122,35 +139,35 @@ const Report5110_11 = () => {
           <tbody>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">1. Beginning inventory</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.beginningInventory.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${reportData?.inventory.beginningInventory.toFixed(1) || "0.0"}</td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">2. Deposited in storage</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.production.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${reportData?.inventory.production.toFixed(1) || "0.0"}</td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">3. Received in storage</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.transferIn.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${reportData?.inventory.transferIn.toFixed(1) || "0.0"}</td>
             </tr>
             <tr style="background-color: #f2f2f2;">
               <td style="border: 1px solid #ddd; padding: 8px;"><strong>4. Total (Lines 1, 2 & 3)</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(inventory.beginningInventory + inventory.production + inventory.transferIn).toFixed(1)}</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${reportData ? (reportData.inventory.beginningInventory + reportData.inventory.production + reportData.inventory.transferIn).toFixed(1) : "0.0"}</strong></td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">5. Withdrawn from storage</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.bottling.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${reportData?.inventory.bottling.toFixed(1) || "0.0"}</td>
             </tr>
             <tr>
               <td style="border: 1px solid #ddd; padding: 8px;">6. Loss in storage</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${inventory.loss.toFixed(1)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${reportData?.inventory.loss.toFixed(1) || "0.0"}</td>
             </tr>
             <tr style="background-color: #f2f2f2;">
               <td style="border: 1px solid #ddd; padding: 8px;"><strong>7. Total removed (Lines 5 & 6)</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(inventory.bottling + inventory.loss).toFixed(1)}</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${reportData ? (reportData.inventory.bottling + reportData.inventory.loss).toFixed(1) : "0.0"}</strong></td>
             </tr>
             <tr style="background-color: #e6e6e6;">
               <td style="border: 1px solid #ddd; padding: 8px;"><strong>8. Ending inventory (Line 4 minus Line 7)</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${inventory.endingInventory.toFixed(1)}</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${reportData?.inventory.endingInventory.toFixed(1) || "0.0"}</strong></td>
             </tr>
           </tbody>
         </table>
@@ -248,8 +265,8 @@ const Report5110_11 = () => {
                   <Label htmlFor="registrationNumber">Registration Number</Label>
                   <Input
                     id="registrationNumber"
-                    value={registrationNumber}
-                    onChange={(e) => setRegistrationNumber(e.target.value)}
+                    value={reportData?.registrationNumber || ""}
+                    onChange={(e) => updateReportField('registrationNumber', e.target.value)}
                     placeholder="e.g., DSP-XX-12345"
                   />
                 </div>
@@ -258,8 +275,8 @@ const Report5110_11 = () => {
                   <Label htmlFor="proprietorName">Proprietor Name</Label>
                   <Input
                     id="proprietorName"
-                    value={proprietorName}
-                    onChange={(e) => setProprietorName(e.target.value)}
+                    value={reportData?.proprietorName || ""}
+                    onChange={(e) => updateReportField('proprietorName', e.target.value)}
                   />
                 </div>
                 
@@ -267,8 +284,8 @@ const Report5110_11 = () => {
                   <Label htmlFor="proprietorAddress">Storage Facility Address</Label>
                   <Input
                     id="proprietorAddress"
-                    value={proprietorAddress}
-                    onChange={(e) => setProprietorAddress(e.target.value)}
+                    value={reportData?.proprietorAddress || ""}
+                    onChange={(e) => updateReportField('proprietorAddress', e.target.value)}
                   />
                 </div>
                 
@@ -276,14 +293,19 @@ const Report5110_11 = () => {
                   <Label htmlFor="einNumber">EIN Number</Label>
                   <Input
                     id="einNumber"
-                    value={einNumber}
-                    onChange={(e) => setEinNumber(e.target.value)}
+                    value={reportData?.einNumber || ""}
+                    onChange={(e) => updateReportField('einNumber', e.target.value)}
                   />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="reportType">Report Type</Label>
-                  <Select defaultValue="original">
+                  <Select 
+                    value={reportData?.reportType || "original"}
+                    onValueChange={(value: 'original' | 'amended' | 'final') => 
+                      updateReportField('reportType', value)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -322,7 +344,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={inventory.beginningInventory.toFixed(1)}
+                            value={reportData?.inventory.beginningInventory.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -338,7 +360,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={inventory.production.toFixed(1)}
+                            value={reportData?.inventory.production.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -354,7 +376,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={inventory.transferIn.toFixed(1)}
+                            value={reportData?.inventory.transferIn.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -366,7 +388,7 @@ const Report5110_11 = () => {
                           4. Total (Lines 1, 2 & 3)
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(inventory.beginningInventory + inventory.production + inventory.transferIn).toFixed(1)}
+                          {reportData ? (reportData.inventory.beginningInventory + reportData.inventory.production + reportData.inventory.transferIn).toFixed(1) : "0.0"}
                         </td>
                       </tr>
                       
@@ -379,7 +401,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={inventory.bottling.toFixed(1)}
+                            value={reportData?.inventory.bottling.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -395,7 +417,7 @@ const Report5110_11 = () => {
                         </td>
                         <td className="p-3 text-right">
                           <Input 
-                            value={inventory.loss.toFixed(1)}
+                            value={reportData?.inventory.loss.toFixed(1) || "0.0"}
                             readOnly
                             className="text-right w-28 bg-muted inline-block"
                           />
@@ -407,7 +429,7 @@ const Report5110_11 = () => {
                           7. Total removed (Lines 5 & 6)
                         </td>
                         <td className="p-3 text-right font-medium">
-                          {(inventory.bottling + inventory.loss).toFixed(1)}
+                          {reportData ? (reportData.inventory.bottling + reportData.inventory.loss).toFixed(1) : "0.0"}
                         </td>
                       </tr>
                       
@@ -416,7 +438,7 @@ const Report5110_11 = () => {
                           8. Ending inventory (Line 4 minus Line 7)
                         </td>
                         <td className="p-3 text-right font-bold">
-                          {inventory.endingInventory.toFixed(1)}
+                          {reportData?.inventory.endingInventory.toFixed(1) || "0.0"}
                         </td>
                       </tr>
                     </tbody>

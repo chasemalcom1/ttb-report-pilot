@@ -11,36 +11,23 @@ export const literToProofGallon = (liters: number, proof: number): number => {
   return Math.round(proofGallons * 10) / 10;
 };
 
-// Function to sum operations by type with optional date filtering
+// Function to sum operations by type from a pre-filtered array
 export function sumOperationsByType(
   operations: Operation[],
-  type: OperationType,
-  startDate?: Date,
-  endDate?: Date
+  type: OperationType
 ): number {
-  console.log(`Calculating sum for ${type} with ${operations.length} total operations`);
-  console.log('Date range:', startDate ? startDate.toISOString() : 'no start', 'to', endDate ? endDate.toISOString() : 'no end');
+  console.log(`Calculating sum for ${type} with ${operations.length} operations`);
   
-  let filteredOperations = operations.filter(op => {
+  const filteredOperations = operations.filter(op => {
     const typeMatch = op.type === type;
-    console.log(`Operation ${op.id}: type=${op.type}, matches=${typeMatch}`);
+    console.log(`Operation ${op.id}: type=${op.type}, matches=${typeMatch}, PG=${op.proofGallons}`);
     return typeMatch;
   });
   
   console.log(`Found ${filteredOperations.length} operations of type ${type}`);
   
-  // If date range is provided, filter by date range
-  if (startDate && endDate) {
-    filteredOperations = filteredOperations.filter(op => {
-      const dateInRange = op.date >= startDate && op.date <= endDate;
-      console.log(`Operation ${op.id}: date=${op.date.toISOString()}, in range=${dateInRange}`);
-      return dateInRange;
-    });
-    console.log(`After date filtering: ${filteredOperations.length} operations`);
-  }
-  
   const total = filteredOperations.reduce((sum, op) => {
-    console.log(`Adding operation ${op.id}: ${op.proofGallons} PG`);
+    console.log(`Adding operation ${op.id}: ${op.proofGallons} PG (${op.liters}L at ${op.proof} proof)`);
     return sum + op.proofGallons;
   }, 0);
   

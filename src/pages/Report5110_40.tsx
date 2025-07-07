@@ -33,10 +33,12 @@ const Report5110_40 = () => {
   
   // Load or create report data
   const loadReportData = () => {
+    console.log('=== LOADING REPORT DATA ===');
     console.log('Loading report data for period:', reportPeriod);
     const data = getOrCreateReport<Report5110_40Data>('5110-40', reportPeriod);
     setReportData(data);
     console.log('Loaded report data:', data);
+    console.log('=== REPORT DATA LOADED ===');
   };
   
   // Update report data when period changes
@@ -65,19 +67,34 @@ const Report5110_40 = () => {
   
   useOperationUpdates(refreshData);
   
-  // Also listen for localStorage changes to operations
+  // Listen for localStorage changes to operations with immediate refresh
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'operations') {
-        console.log('Operations localStorage changed, refreshing data...');
-        setTimeout(() => {
-          refreshData();
-        }, 100);
+        console.log('=== OPERATIONS STORAGE CHANGED ===');
+        console.log('Operations localStorage changed, refreshing data immediately...');
+        refreshData();
       }
     };
     
+    // Also listen for any localStorage changes (including same-window changes)
+    const handleLocalStorageUpdate = () => {
+      console.log('=== LOCAL STORAGE UPDATE DETECTED ===');
+      refreshData();
+    };
+    
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    
+    // Set up a polling mechanism to catch same-window localStorage changes
+    const pollInterval = setInterval(() => {
+      // This will trigger a refresh every 2 seconds to catch any missed updates
+      refreshData();
+    }, 2000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(pollInterval);
+    };
   }, [reportPeriod]);
   
   // Force refresh when component mounts or period changes

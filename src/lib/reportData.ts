@@ -1,3 +1,4 @@
+
 import { format, startOfMonth, subMonths, addMonths } from 'date-fns';
 import { getFromLocalStorage, saveToLocalStorage } from './storageUtils';
 import { sumOperationsByType } from './calculationUtils';
@@ -65,6 +66,12 @@ function getCurrentOperations(): Operation[] {
   console.log('Getting current operations from localStorage');
   const operations = getFromLocalStorage<Operation>('operations', []);
   console.log(`Found ${operations.length} operations in storage`);
+  
+  // Add detailed logging for each operation
+  operations.forEach(op => {
+    console.log(`Operation ${op.id}: ${op.type}, ${op.proofGallons} PG, date: ${op.date.toISOString()}`);
+  });
+  
   return operations;
 }
 
@@ -118,23 +125,29 @@ export function calculateInventoryFromOperations(
   const previousMonth = subMonths(reportPeriod, 1);
   const previousReport = getReportByMonth(formType, previousMonth);
   
-  console.log(`Calculating inventory for ${formType} - ${format(reportPeriod, 'yyyy-MM')}`);
+  console.log(`=== CALCULATING INVENTORY FOR ${formType} - ${format(reportPeriod, 'yyyy-MM')} ===`);
   console.log('Previous report:', previousReport);
-  console.log('Date range:', startDate, 'to', endDate);
+  console.log('Date range:', startDate.toISOString(), 'to', endDate.toISOString());
   
   // Get current operations from localStorage
   const allOperations = getCurrentOperations();
   console.log(`Total operations available: ${allOperations.length}`);
   
   // Filter operations for this month
-  const monthOperations = allOperations.filter(op => 
-    op.date >= startDate && op.date <= endDate
-  );
+  const monthOperations = allOperations.filter(op => {
+    const opDate = new Date(op.date);
+    const inRange = opDate >= startDate && opDate <= endDate;
+    console.log(`Operation ${op.id} (${op.type}): date=${opDate.toISOString()}, in range=${inRange}`);
+    return inRange;
+  });
   
   console.log(`Operations in period ${format(reportPeriod, 'yyyy-MM')}:`, monthOperations.length);
-  monthOperations.forEach(op => {
-    console.log(`- ${op.type}: ${op.proofGallons} PG on ${op.date.toISOString()}`);
-  });
+  console.log('Month operations:', monthOperations.map(op => ({ 
+    id: op.id, 
+    type: op.type, 
+    proofGallons: op.proofGallons, 
+    date: op.date.toISOString() 
+  })));
   
   // Base calculations from operations using the filtered month operations
   const production = sumOperationsByType(monthOperations, 'production');
@@ -153,13 +166,28 @@ export function calculateInventoryFromOperations(
   
   const beginningInventory = previousReport?.inventory.endingInventory || defaultBeginningInventory[formType];
   
+  console.log('=== CALCULATION RESULTS ===');
   console.log('Beginning inventory:', beginningInventory);
   console.log('Operations totals:', { production, transferIn, bottling, transferOut, taxWithdrawal, loss });
   
   // Form-specific calculations
   switch (formType) {
     case '5110-40':
-      const endingInventory40 = beginningInventory + production + transferIn - bottling - transferOut - loss;
+      const totalAvailable = beginningInventory + production + transferIn;
+      const totalDisposed = bottling + transferOut + loss;
+      const endingInventory40 = totalAvailable - totalDisposed;
+      
+      console.log('5110-40 CALCULATION:');
+      console.log(`- Beginning: ${beginningInventory}`);
+      console.log(`- Production: ${production}`);
+      console.log(`- Transfer In: ${transferIn}`);
+      console.log(`- Total Available: ${totalAvailable}`);
+      console.log(`- Bottling: ${bottling}`);
+      console.log(`- Transfer Out: ${transferOut}`);
+      console.log(`- Loss: ${loss}`);
+      console.log(`- Total Disposed: ${totalDisposed}`);
+      console.log(`- Ending Inventory: ${endingInventory40}`);
+      
       return {
         beginningInventory,
         production,

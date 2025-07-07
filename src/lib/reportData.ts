@@ -126,18 +126,19 @@ export function calculateInventoryFromOperations(
   const previousReport = getReportByMonth(formType, previousMonth);
   
   console.log(`=== CALCULATING INVENTORY FOR ${formType} - ${format(reportPeriod, 'yyyy-MM')} ===`);
+  console.log('Report period:', format(reportPeriod, 'yyyy-MM-dd'));
+  console.log('Date range:', format(startDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
   console.log('Previous report:', previousReport);
-  console.log('Date range:', startDate.toISOString(), 'to', endDate.toISOString());
   
   // Get current operations from localStorage
   const allOperations = getCurrentOperations();
   console.log(`Total operations available: ${allOperations.length}`);
   
-  // Filter operations for this month
+  // Filter operations for this month with more detailed logging
   const monthOperations = allOperations.filter(op => {
     const opDate = new Date(op.date);
     const inRange = opDate >= startDate && opDate <= endDate;
-    console.log(`Operation ${op.id} (${op.type}): date=${opDate.toISOString()}, in range=${inRange}`);
+    console.log(`Operation ${op.id} (${op.type}): date=${format(opDate, 'yyyy-MM-dd')}, in range=${inRange}`);
     return inRange;
   });
   
@@ -146,7 +147,7 @@ export function calculateInventoryFromOperations(
     id: op.id, 
     type: op.type, 
     proofGallons: op.proofGallons, 
-    date: op.date.toISOString() 
+    date: format(new Date(op.date), 'yyyy-MM-dd')
   })));
   
   // Base calculations from operations using the filtered month operations
@@ -200,6 +201,13 @@ export function calculateInventoryFromOperations(
       
     case '5110-28':
       const endingInventory28 = beginningInventory + bottling - taxWithdrawal;
+      
+      console.log('5110-28 CALCULATION:');
+      console.log(`- Beginning: ${beginningInventory}`);
+      console.log(`- Bottling: ${bottling}`);
+      console.log(`- Tax Withdrawal: ${taxWithdrawal}`);
+      console.log(`- Ending Inventory: ${endingInventory28}`);
+      
       return {
         beginningInventory,
         bottling,

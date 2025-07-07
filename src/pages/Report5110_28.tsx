@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import CalendarIcon from "@/components/icons/CalendarIcon";
 import { Download, FileText, Printer } from "lucide-react";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 import { MOCK_OPERATIONS } from "@/lib/models";
 import { 
@@ -23,7 +22,8 @@ import { useOperationUpdates } from "@/lib/operationSubscription";
 import { toast } from "@/components/ui/sonner";
 
 const Report5110_28 = () => {
-  const [reportPeriod, setReportPeriod] = useState<Date>(startOfMonth(subMonths(new Date(), 1)));
+  // Default to current month instead of previous month
+  const [reportPeriod, setReportPeriod] = useState<Date>(startOfMonth(new Date()));
   const [reportData, setReportData] = useState<Report5110_28Data | null>(null);
   
   // Create date range for the selected month
@@ -211,7 +211,14 @@ const Report5110_28 = () => {
             Monthly Report of Processing Operations (Form 5110.28)
           </CardTitle>
           <CardDescription>
-            Reporting period: {format(reportPeriod, "MMMM yyyy")}
+            <div className="flex items-center gap-2">
+              <span>Reporting period: {format(reportPeriod, "MMMM yyyy")}</span>
+              {format(reportPeriod, "yyyy-MM") === format(new Date(), "yyyy-MM") && (
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                  Current Month
+                </span>
+              )}
+            </div>
           </CardDescription>
         </CardHeader>
         <CardContent>

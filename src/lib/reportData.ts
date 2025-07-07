@@ -1,6 +1,7 @@
 import { format, startOfMonth, subMonths, addMonths } from 'date-fns';
 import { getFromLocalStorage, saveToLocalStorage } from './storageUtils';
-import { MOCK_OPERATIONS, sumOperationsByType } from './models';
+import { sumOperationsByType } from './calculationUtils';
+import { Operation } from './types';
 
 // Report data interfaces
 export interface ReportFormData {
@@ -59,6 +60,14 @@ const STORAGE_KEYS = {
   '5110-11': 'reports_5110_11'
 } as const;
 
+// Get current operations from localStorage
+function getCurrentOperations(): Operation[] {
+  console.log('Getting current operations from localStorage');
+  const operations = getFromLocalStorage<Operation>('operations', []);
+  console.log(`Found ${operations.length} operations in storage`);
+  return operations;
+}
+
 // Get all reports for a specific form type
 export function getReports<T extends ReportData>(formType: T['formType']): T[] {
   return getFromLocalStorage<T>(STORAGE_KEYS[formType], []);
@@ -113,20 +122,27 @@ export function calculateInventoryFromOperations(
   console.log('Previous report:', previousReport);
   console.log('Date range:', startDate, 'to', endDate);
   
+  // Get current operations from localStorage
+  const allOperations = getCurrentOperations();
+  console.log(`Total operations available: ${allOperations.length}`);
+  
   // Filter operations for this month
-  const monthOperations = MOCK_OPERATIONS.filter(op => 
+  const monthOperations = allOperations.filter(op => 
     op.date >= startDate && op.date <= endDate
   );
   
-  console.log('Operations in period:', monthOperations);
+  console.log(`Operations in period ${format(reportPeriod, 'yyyy-MM')}:`, monthOperations.length);
+  monthOperations.forEach(op => {
+    console.log(`- ${op.type}: ${op.proofGallons} PG on ${op.date.toISOString()}`);
+  });
   
-  // Base calculations from operations
+  // Base calculations from operations using the filtered month operations
   const production = sumOperationsByType(monthOperations, 'production');
   const transferIn = sumOperationsByType(monthOperations, 'transfer_in');
   const bottling = sumOperationsByType(monthOperations, 'bottling');
   const transferOut = sumOperationsByType(monthOperations, 'transfer_out');
   const taxWithdrawal = sumOperationsByType(monthOperations, 'tax_withdrawal');
-  const loss = sumOperationsByType(monthOperations, 'loss') || 1.8;
+  const loss = sumOperationsByType(monthOperations, 'loss') || 0;
   
   // Default beginning inventories (used if no previous report exists)
   const defaultBeginningInventory = {
@@ -258,6 +274,8 @@ export function refreshReportInventory<T extends ReportData>(
   formType: T['formType'],
   reportPeriod: Date
 ): T {
+  console.log(`Refreshing ${formType} report inventory for ${format(reportPeriod, 'yyyy-MM')}`);
+  
   const currentReport = getReportByMonth<T>(formType, reportPeriod);
   const newInventory = calculateInventoryFromOperations(reportPeriod, formType);
   
@@ -289,7 +307,7 @@ export function refreshReportInventory<T extends ReportData>(
   }
   
   saveReport(updatedReport);
-  console.log(`Refreshed ${formType} report inventory for ${format(reportPeriod, 'yyyy-MM')}`);
+  console.log(`Refreshed ${formType} report inventory for ${format(reportPeriod, 'yyyy-MM')}:`, updatedReport);
   
   return updatedReport;
 }

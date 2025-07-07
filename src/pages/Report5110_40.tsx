@@ -46,22 +46,44 @@ const Report5110_40 = () => {
   
   // Subscribe to operation updates and refresh inventory
   const refreshData = () => {
-    console.log('Refreshing data due to operation update');
+    console.log('=== OPERATION UPDATE DETECTED ===');
+    console.log('Refreshing Form 5110-40 data due to operation update');
+    
+    // Force refresh the inventory calculations
     const refreshedData = refreshReportInventory<Report5110_40Data>('5110-40', reportPeriod);
     setReportData(refreshedData);
     
     // Also refresh reports for current month in case operations affect multiple months
     const currentMonth = startOfMonth(new Date());
     if (format(reportPeriod, 'yyyy-MM') !== format(currentMonth, 'yyyy-MM')) {
+      console.log('Also refreshing current month reports');
       refreshAllReportsForMonth(currentMonth);
     }
+    
+    console.log('=== REFRESH COMPLETE ===');
   };
   
   useOperationUpdates(refreshData);
   
+  // Also listen for localStorage changes to operations
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'operations') {
+        console.log('Operations localStorage changed, refreshing data...');
+        setTimeout(() => {
+          refreshData();
+        }, 100);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [reportPeriod]);
+  
   // Force refresh when component mounts or period changes
   useEffect(() => {
     const timer = setTimeout(() => {
+      console.log('Force refreshing data on mount/period change');
       refreshData();
     }, 100);
     
@@ -139,6 +161,11 @@ const Report5110_40 = () => {
           </CardTitle>
           <CardDescription>
             Reporting period: {format(reportPeriod, "MMMM yyyy")}
+            {reportData && (
+              <span className="ml-4 text-xs text-blue-600">
+                Last updated: {format(reportData.updatedAt, "MM/dd/yyyy HH:mm:ss")}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -309,7 +336,7 @@ const Report5110_40 = () => {
                         </td>
                       </tr>
                       
-                      <tr className="border-b">
+                      <tr className="border-b bg-yellow-50">
                         <td className="p-3">
                           <div className="font-medium">5. Bottled</div>
                           <div className="text-xs text-muted-foreground">
@@ -320,7 +347,7 @@ const Report5110_40 = () => {
                           <Input 
                             value={reportData?.inventory.bottling.toFixed(1) || "0.0"}
                             readOnly
-                            className="text-right w-28 bg-muted inline-block"
+                            className="text-right w-28 bg-yellow-100 inline-block font-semibold"
                           />
                         </td>
                       </tr>
@@ -384,6 +411,9 @@ const Report5110_40 = () => {
                       <strong>Note:</strong> Values are automatically calculated from logged operations. 
                       The ending inventory ({reportData.inventory.endingInventory.toFixed(1)} PG) will become 
                       the beginning inventory for next month's report.
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Bottling operations: {reportData.inventory.bottling.toFixed(1)} PG
                     </p>
                   </div>
                 )}

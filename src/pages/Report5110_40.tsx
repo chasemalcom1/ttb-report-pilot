@@ -17,6 +17,7 @@ import {
   getOrCreateReport, 
   saveReport, 
   refreshReportInventory,
+  refreshAllReportsForMonth,
   Report5110_40Data
 } from "@/lib/reportData";
 import { useOperationUpdates } from "@/lib/operationSubscription";
@@ -32,8 +33,10 @@ const Report5110_40 = () => {
   
   // Load or create report data
   const loadReportData = () => {
+    console.log('Loading report data for period:', reportPeriod);
     const data = getOrCreateReport<Report5110_40Data>('5110-40', reportPeriod);
     setReportData(data);
+    console.log('Loaded report data:', data);
   };
   
   // Update report data when period changes
@@ -43,13 +46,27 @@ const Report5110_40 = () => {
   
   // Subscribe to operation updates and refresh inventory
   const refreshData = () => {
-    if (reportData) {
-      const refreshedData = refreshReportInventory<Report5110_40Data>('5110-40', reportPeriod);
-      setReportData(refreshedData);
+    console.log('Refreshing data due to operation update');
+    const refreshedData = refreshReportInventory<Report5110_40Data>('5110-40', reportPeriod);
+    setReportData(refreshedData);
+    
+    // Also refresh reports for current month in case operations affect multiple months
+    const currentMonth = startOfMonth(new Date());
+    if (format(reportPeriod, 'yyyy-MM') !== format(currentMonth, 'yyyy-MM')) {
+      refreshAllReportsForMonth(currentMonth);
     }
   };
   
   useOperationUpdates(refreshData);
+  
+  // Force refresh when component mounts or period changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      refreshData();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [reportPeriod]);
   
   // Save report data changes
   const updateReportField = (field: keyof Report5110_40Data, value: any) => {
@@ -237,7 +254,7 @@ const Report5110_40 = () => {
                     <tbody>
                       <tr className="border-b">
                         <td className="p-3">
-                          <div className="font-medium">1. Beginning inventory</div>
+                          <div className="font-medium">1. Beginning inventory (Line 15 from previous month)</div>
                           <div className="text-xs text-muted-foreground">
                             On hand beginning of month
                           </div>
@@ -255,7 +272,7 @@ const Report5110_40 = () => {
                         <td className="p-3">
                           <div className="font-medium">2. Spirits produced</div>
                           <div className="text-xs text-muted-foreground">
-                            Total production (from operations log)
+                            Total production from logged operations
                           </div>
                         </td>
                         <td className="p-3 text-right">
@@ -271,7 +288,7 @@ const Report5110_40 = () => {
                         <td className="p-3">
                           <div className="font-medium">3. Spirits received</div>
                           <div className="text-xs text-muted-foreground">
-                            Received from other plants
+                            Received from other plants (transfer in)
                           </div>
                         </td>
                         <td className="p-3 text-right">
@@ -285,7 +302,7 @@ const Report5110_40 = () => {
                       
                       <tr className="border-b bg-muted/20">
                         <td className="p-3 font-medium">
-                          4. Total spirits available
+                          4. Total spirits available (Lines 1, 2 & 3)
                         </td>
                         <td className="p-3 text-right font-medium">
                           {reportData ? (reportData.inventory.beginningInventory + reportData.inventory.production + reportData.inventory.transferIn).toFixed(1) : "0.0"}
@@ -296,7 +313,7 @@ const Report5110_40 = () => {
                         <td className="p-3">
                           <div className="font-medium">5. Bottled</div>
                           <div className="text-xs text-muted-foreground">
-                            Total bottled this month
+                            Total bottled from logged operations
                           </div>
                         </td>
                         <td className="p-3 text-right">
@@ -328,7 +345,7 @@ const Report5110_40 = () => {
                         <td className="p-3">
                           <div className="font-medium">7. Loss & Destruction</div>
                           <div className="text-xs text-muted-foreground">
-                            Documented loss (normal & abnormal)
+                            Documented loss from logged operations
                           </div>
                         </td>
                         <td className="p-3 text-right">
@@ -342,7 +359,7 @@ const Report5110_40 = () => {
                       
                       <tr className="border-b bg-muted/20">
                         <td className="p-3 font-medium">
-                          8. Total spirits disposed of
+                          8. Total spirits disposed of (Lines 5, 6 & 7)
                         </td>
                         <td className="p-3 text-right font-medium">
                           {reportData ? (reportData.inventory.bottling + reportData.inventory.transferOut + reportData.inventory.loss).toFixed(1) : "0.0"}
@@ -351,7 +368,7 @@ const Report5110_40 = () => {
                       
                       <tr className="border-b bg-muted/50">
                         <td className="p-3 font-bold">
-                          9. Ending inventory
+                          15. Ending inventory (Line 4 minus Line 8)
                         </td>
                         <td className="p-3 text-right font-bold">
                           {reportData?.inventory.endingInventory.toFixed(1) || "0.0"}
@@ -360,6 +377,16 @@ const Report5110_40 = () => {
                     </tbody>
                   </table>
                 </div>
+                
+                {reportData && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                    <p className="text-sm text-blue-700">
+                      <strong>Note:</strong> Values are automatically calculated from logged operations. 
+                      The ending inventory ({reportData.inventory.endingInventory.toFixed(1)} PG) will become 
+                      the beginning inventory for next month's report.
+                    </p>
+                  </div>
+                )}
               </div>
               
               <div>

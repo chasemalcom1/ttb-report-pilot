@@ -111,14 +111,22 @@ export function calculateInventoryFromOperations(
   
   console.log(`Calculating inventory for ${formType} - ${format(reportPeriod, 'yyyy-MM')}`);
   console.log('Previous report:', previousReport);
+  console.log('Date range:', startDate, 'to', endDate);
+  
+  // Filter operations for this month
+  const monthOperations = MOCK_OPERATIONS.filter(op => 
+    op.date >= startDate && op.date <= endDate
+  );
+  
+  console.log('Operations in period:', monthOperations);
   
   // Base calculations from operations
-  const production = sumOperationsByType(MOCK_OPERATIONS, 'production', startDate, endDate);
-  const transferIn = sumOperationsByType(MOCK_OPERATIONS, 'transfer_in', startDate, endDate);
-  const bottling = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startDate, endDate);
-  const transferOut = sumOperationsByType(MOCK_OPERATIONS, 'transfer_out', startDate, endDate);
-  const taxWithdrawal = sumOperationsByType(MOCK_OPERATIONS, 'tax_withdrawal', startDate, endDate);
-  const loss = sumOperationsByType(MOCK_OPERATIONS, 'loss', startDate, endDate) || 1.8;
+  const production = sumOperationsByType(monthOperations, 'production');
+  const transferIn = sumOperationsByType(monthOperations, 'transfer_in');
+  const bottling = sumOperationsByType(monthOperations, 'bottling');
+  const transferOut = sumOperationsByType(monthOperations, 'transfer_out');
+  const taxWithdrawal = sumOperationsByType(monthOperations, 'tax_withdrawal');
+  const loss = sumOperationsByType(monthOperations, 'loss') || 1.8;
   
   // Default beginning inventories (used if no previous report exists)
   const defaultBeginningInventory = {
@@ -230,6 +238,16 @@ export function getOrCreateReport<T extends ReportData>(
     report = createNewReport(formType, reportPeriod) as T;
     saveReport(report);
     console.log(`Created new ${formType} report for ${format(reportPeriod, 'yyyy-MM')}`);
+  } else {
+    // Always recalculate inventory from current operations
+    const freshInventory = calculateInventoryFromOperations(reportPeriod, formType);
+    report = {
+      ...report,
+      inventory: freshInventory,
+      updatedAt: new Date()
+    } as T;
+    saveReport(report);
+    console.log(`Refreshed ${formType} report for ${format(reportPeriod, 'yyyy-MM')}`);
   }
   
   return report;
@@ -252,9 +270,22 @@ export function refreshReportInventory<T extends ReportData>(
   if (currentReport) {
     updatedReport.id = currentReport.id;
     updatedReport.createdAt = currentReport.createdAt;
+    // Keep other form fields
+    updatedReport.registrationNumber = currentReport.registrationNumber;
+    updatedReport.proprietorName = currentReport.proprietorName;
+    updatedReport.proprietorAddress = currentReport.proprietorAddress;
+    updatedReport.einNumber = currentReport.einNumber;
+    updatedReport.reportType = currentReport.reportType;
+    updatedReport.reportPeriod = currentReport.reportPeriod;
   } else {
     updatedReport.id = `${formType}-${format(reportPeriod, 'yyyy-MM')}-${crypto.randomUUID?.() || Date.now()}`;
     updatedReport.createdAt = new Date();
+    updatedReport.registrationNumber = 'DSP-NY-12345';
+    updatedReport.proprietorName = 'Mountain Spirits Distillery';
+    updatedReport.proprietorAddress = '123 Main St, Springfield, NY 12345';
+    updatedReport.einNumber = 'XX-XXXXXXX';
+    updatedReport.reportType = 'original';
+    updatedReport.reportPeriod = reportPeriod;
   }
   
   saveReport(updatedReport);
@@ -269,4 +300,14 @@ export function getReportMonths(formType: '5110-40' | '5110-28' | '5110-11'): Da
   return reports
     .map(report => startOfMonth(report.reportPeriod))
     .sort((a, b) => b.getTime() - a.getTime()); // Most recent first
+}
+
+// Function to refresh all reports when operations change
+export function refreshAllReportsForMonth(reportPeriod: Date): void {
+  console.log(`Refreshing all reports for ${format(reportPeriod, 'yyyy-MM')}`);
+  
+  // Refresh each form type
+  refreshReportInventory('5110-40', reportPeriod);
+  refreshReportInventory('5110-28', reportPeriod);
+  refreshReportInventory('5110-11', reportPeriod);
 }

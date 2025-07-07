@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -80,10 +79,16 @@ const Dashboard = () => {
   const startOfMonth = new Date(currentYear, currentMonth, 1);
   const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
   
-  // Calculate this month's stats
-  const monthProduction = sumOperationsByType(MOCK_OPERATIONS, 'production', startOfMonth, endOfMonth);
-  const monthBottling = sumOperationsByType(MOCK_OPERATIONS, 'bottling', startOfMonth, endOfMonth);
-  const monthLosses = sumOperationsByType(MOCK_OPERATIONS, 'loss', startOfMonth, endOfMonth);
+  // Filter operations for current month
+  const currentMonthOperations = MOCK_OPERATIONS.filter(op => {
+    const opDate = new Date(op.date);
+    return opDate >= startOfMonth && opDate <= endOfMonth;
+  });
+  
+  // Calculate this month's stats using filtered operations
+  const monthProduction = sumOperationsByType(currentMonthOperations, 'production');
+  const monthBottling = sumOperationsByType(currentMonthOperations, 'bottling');
+  const monthLosses = sumOperationsByType(currentMonthOperations, 'loss');
   
   // Recent activity
   const recentActivity = MOCK_OPERATIONS.map(op => ({

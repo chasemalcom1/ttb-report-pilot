@@ -5,12 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-import { AuthProvider } from "@/contexts/AuthContext";
+import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import AuthGuard from "@/components/AuthGuard";
+import SupabaseAuthGuard from "@/components/SupabaseAuthGuard";
 import AppLayout from "@/components/AppLayout";
 
-import Login from "./pages/Login";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Operations from "./pages/Operations";
 import Spirits from "./pages/Spirits";
@@ -27,73 +27,73 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <AuthProvider>
+      <SupabaseAuthProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
             <Routes>
               {/* Public routes */}
-              <Route path="/login" element={<Login />} />
+              <Route path="/auth" element={<Auth />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               
               {/* Protected Routes */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               
               <Route path="/dashboard" element={
-                <AuthGuard>
+                <SupabaseAuthGuard>
                   <AppLayout>
                     <Dashboard />
                   </AppLayout>
-                </AuthGuard>
+                </SupabaseAuthGuard>
               } />
               
               <Route path="/operations" element={
-                <AuthGuard>
+                <SupabaseAuthGuard>
                   <AppLayout>
                     <Operations />
                   </AppLayout>
-                </AuthGuard>
+                </SupabaseAuthGuard>
               } />
               
               <Route path="/spirits" element={
-                <AuthGuard>
+                <SupabaseAuthGuard>
                   <AppLayout>
                     <Spirits />
                   </AppLayout>
-                </AuthGuard>
+                </SupabaseAuthGuard>
               } />
               
               <Route path="/reports/5110-40" element={
-                <AuthGuard>
+                <SupabaseAuthGuard>
                   <AppLayout>
                     <Report5110_40 />
                   </AppLayout>
-                </AuthGuard>
+                </SupabaseAuthGuard>
               } />
               
               <Route path="/reports/5110-28" element={
-                <AuthGuard>
+                <SupabaseAuthGuard>
                   <AppLayout>
                     <Report5110_28 />
                   </AppLayout>
-                </AuthGuard>
+                </SupabaseAuthGuard>
               } />
               
               <Route path="/reports/5110-11" element={
-                <AuthGuard>
+                <SupabaseAuthGuard>
                   <AppLayout>
                     <Report5110_11 />
                   </AppLayout>
-                </AuthGuard>
+                </SupabaseAuthGuard>
               } />
               
               <Route path="/settings" element={
-                <AuthGuard allowedRoles={['admin']}>
+                <SupabaseAuthGuard allowedRoles={['admin']}>
                   <AppLayout>
                     <Settings />
                   </AppLayout>
-                </AuthGuard>
+                </SupabaseAuthGuard>
               } />
               
               {/* Catch All */}
@@ -101,7 +101,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
-      </AuthProvider>
+      </SupabaseAuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );

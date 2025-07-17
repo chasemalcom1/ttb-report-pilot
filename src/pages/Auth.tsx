@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
@@ -13,8 +12,15 @@ import { Loader2, Building2 } from 'lucide-react';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp } = useSupabaseAuth();
+  const { signIn, signUp, session } = useSupabaseAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (session) {
+      navigate('/dashboard');
+    }
+  }, [session, navigate]);
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -56,9 +62,14 @@ const Auth = () => {
       const { error } = await signIn(loginData.email, loginData.password);
       
       if (error) {
-        toast.error(error.message || 'Failed to sign in');
+        if (error.message.includes('Email not confirmed')) {
+          toast.error('Please check your email and click the verification link before signing in.');
+        } else {
+          toast.error(error.message || 'Failed to sign in');
+        }
       } else {
-        navigate('/dashboard');
+        toast.success('Welcome back!');
+        // Navigation will be handled by the useEffect above when session updates
       }
     } catch (error) {
       toast.error('An unexpected error occurred');
@@ -140,7 +151,7 @@ const Auth = () => {
               <CardHeader>
                 <CardTitle>Welcome Back</CardTitle>
                 <CardDescription>
-                  Sign in to your account to access your reports
+                  Sign in to your account to access your reports. If you just created an account, please verify your email first.
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSignIn}>

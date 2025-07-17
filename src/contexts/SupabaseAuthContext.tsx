@@ -122,6 +122,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         
         if (session?.user) {
@@ -153,28 +154,69 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const signUp = async (data: SignUpData) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
+      // First, create the organization
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          name: data.organizationName,
+          type: data.organizationType,
+          dsp_number: data.dspNumber || null,
+          permit_number: data.permitNumber || null,
+          ein: data.ein || null,
+          address: data.address || null,
+          city: data.city || null,
+          state: data.state || null,
+          zip_code: data.zipCode || null,
+          phone: data.phone || null,
+        })
+        .select()
+        .single();
+
+      if (orgError || !orgData) {
+        console.error('Error creating organization:', orgError);
+        return { error: orgError };
+      }
+
+      // Create user account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: redirectUrl,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             first_name: data.firstName,
             last_name: data.lastName,
+            organization_id: orgData.id,
+            role: data.role,
           }
         }
       });
 
-      if (error) return { error };
+      if (authError) {
+        // If user creation fails, we should clean up the organization
+        await supabase.from('organizations').delete().eq('id', orgData.id);
+        return { error: authError };
+      }
 
-      // Note: Organization and role creation will need to be handled after email confirmation
-      // or through a database function triggered on user creation
-      
+      // Create user role after successful signup
+      if (authData.user) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: authData.user.id,
+            organization_id: orgData.id,
+            role: data.role,
+          });
+
+        if (roleError) {
+          console.error('Error creating user role:', roleError);
+        }
+      }
+
       toast.success('Account created! Please check your email to verify your account.');
       return { error: null };
     } catch (error) {
+      console.error('Signup error:', error);
       return { error };
     }
   };
@@ -188,7 +230,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (error) return { error };
 
-      toast.success('Welcome back!');
+      // Don't show toast here - let the calling component handle navigation
       return { error: null };
     } catch (error) {
       return { error };

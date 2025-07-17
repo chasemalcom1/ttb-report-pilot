@@ -109,7 +109,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           email: profile.email,
           profile,
           organization: userRole.organizations as Organization,
-          role: userRole.role,
+          role: userRole.role as 'admin' | 'production' | 'accounting',
         };
         setUser(authUser);
       }

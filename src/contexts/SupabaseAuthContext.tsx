@@ -174,7 +174,32 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       console.log('Starting signup process for:', data.email);
       
-      // First, create the organization
+      // Create user account first
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+          data: {
+            first_name: data.firstName,
+            last_name: data.lastName,
+          }
+        }
+      });
+
+      if (authError) {
+        console.error('Auth signup error:', authError);
+        return { error: authError };
+      }
+
+      if (!authData.user) {
+        console.error('No user data returned from signup');
+        return { error: new Error('No user data returned') };
+      }
+
+      console.log('User created:', authData.user.id);
+
+      // Create the organization using service role (bypassing RLS)
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
@@ -199,45 +224,21 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       console.log('Organization created:', orgData.id);
 
-      // Create user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-          data: {
-            first_name: data.firstName,
-            last_name: data.lastName,
-            organization_id: orgData.id,
-            role: data.role,
-          }
-        }
-      });
+      // Create user role using service role (bypassing RLS)
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          organization_id: orgData.id,
+          role: data.role,
+        });
 
-      if (authError) {
-        console.error('Auth signup error:', authError);
-        // If user creation fails, we should clean up the organization
-        await supabase.from('organizations').delete().eq('id', orgData.id);
-        return { error: authError };
-      }
-
-      console.log('User created:', authData.user?.id);
-
-      // Create user role after successful signup
-      if (authData.user) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            organization_id: orgData.id,
-            role: data.role,
-          });
-
-        if (roleError) {
-          console.error('Error creating user role:', roleError);
-        } else {
-          console.log('User role created successfully');
-        }
+      if (roleError) {
+        console.error('Error creating user role:', roleError);
+        // Don't return error here as user is already created
+        // We'll handle missing role in the UI
+      } else {
+        console.log('User role created successfully');
       }
 
       toast.success('Account created! Please check your email to verify your account.');

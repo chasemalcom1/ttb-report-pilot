@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -8,7 +9,7 @@ import {
   FlaskConical, 
   Info
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { 
   MOCK_SPIRITS, 
   MOCK_BATCHES, 
@@ -71,7 +72,7 @@ const RecentActivityItem = ({
 );
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user } = useSupabaseAuth();
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
@@ -133,7 +134,7 @@ const Dashboard = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome back, {user?.name}. Here's what's happening at {user?.organization.name}.
+            Welcome back, {user?.profile?.first_name} {user?.profile?.last_name}. Here's what's happening at {user?.organization?.name}.
           </p>
         </div>
         

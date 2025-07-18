@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface Profile {
   id: string;
@@ -84,17 +85,24 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const loadUserData = async (userId: string) => {
     try {
+      console.log('Loading user data for:', userId);
+      
       // Get user profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (!profile) return;
+      console.log('Profile data:', profile, 'Profile error:', profileError);
+
+      if (!profile) {
+        console.log('No profile found for user');
+        return;
+      }
 
       // Get user role and organization
-      const { data: userRole } = await supabase
+      const { data: userRole, error: roleError } = await supabase
         .from('user_roles')
         .select(`
           *,
@@ -102,6 +110,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         `)
         .eq('user_id', userId)
         .single();
+
+      console.log('User role data:', userRole, 'Role error:', roleError);
 
       if (userRole && userRole.organizations) {
         const authUser: AuthUser = {
@@ -111,7 +121,10 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           organization: userRole.organizations as Organization,
           role: userRole.role as 'admin' | 'production' | 'accounting',
         };
+        console.log('Setting auth user:', authUser);
         setUser(authUser);
+      } else {
+        console.log('No role or organization found for user');
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -119,6 +132,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   useEffect(() => {
+    console.log('Setting up auth state listener');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -126,11 +141,13 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setSession(session);
         
         if (session?.user) {
+          console.log('User session found, loading user data');
           // Defer data loading to prevent deadlocks
           setTimeout(() => {
             loadUserData(session.user.id);
           }, 0);
         } else {
+          console.log('No user session, clearing user data');
           setUser(null);
         }
         
@@ -140,6 +157,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       if (session?.user) {
         setTimeout(() => {
@@ -154,6 +172,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const signUp = async (data: SignUpData) => {
     try {
+      console.log('Starting signup process for:', data.email);
+      
       // First, create the organization
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
@@ -177,6 +197,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return { error: orgError };
       }
 
+      console.log('Organization created:', orgData.id);
+
       // Create user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -193,10 +215,13 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       });
 
       if (authError) {
+        console.error('Auth signup error:', authError);
         // If user creation fails, we should clean up the organization
         await supabase.from('organizations').delete().eq('id', orgData.id);
         return { error: authError };
       }
+
+      console.log('User created:', authData.user?.id);
 
       // Create user role after successful signup
       if (authData.user) {
@@ -210,6 +235,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
         if (roleError) {
           console.error('Error creating user role:', roleError);
+        } else {
+          console.log('User role created successfully');
         }
       }
 
@@ -223,16 +250,22 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Attempting to sign in:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log('Sign in result:', { user: data.user?.id, error });
+
       if (error) return { error };
 
-      // Don't show toast here - let the calling component handle navigation
+      // The navigation will be handled by the auth state change
+      console.log('Sign in successful, auth state change should trigger navigation');
       return { error: null };
     } catch (error) {
+      console.error('Sign in error:', error);
       return { error };
     }
   };

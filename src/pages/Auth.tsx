@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
@@ -12,15 +13,18 @@ import { Loader2, Building2 } from 'lucide-react';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, session } = useSupabaseAuth();
+  const { signIn, signUp, session, user, loading } = useSupabaseAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (session) {
+    console.log('Auth useEffect - session:', !!session, 'user:', !!user, 'loading:', loading);
+    
+    if (!loading && session && user) {
+      console.log('User is authenticated, redirecting to dashboard');
       navigate('/dashboard');
     }
-  }, [session, navigate]);
+  }, [session, user, loading, navigate]);
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -59,19 +63,25 @@ const Auth = () => {
     setIsLoading(true);
     
     try {
+      console.log('Submitting sign in form');
       const { error } = await signIn(loginData.email, loginData.password);
       
       if (error) {
+        console.error('Sign in error:', error);
         if (error.message.includes('Email not confirmed')) {
           toast.error('Please check your email and click the verification link before signing in.');
+        } else if (error.message.includes('Invalid login credentials')) {
+          toast.error('Invalid email or password. Please check your credentials.');
         } else {
           toast.error(error.message || 'Failed to sign in');
         }
       } else {
+        console.log('Sign in successful');
         toast.success('Welcome back!');
-        // Navigation will be handled by the useEffect above when session updates
+        // Don't navigate here - let the useEffect handle it
       }
     } catch (error) {
+      console.error('Unexpected sign in error:', error);
       toast.error('An unexpected error occurred');
     } finally {
       setIsLoading(false);
@@ -128,6 +138,16 @@ const Auth = () => {
       setIsLoading(false);
     }
   };
+
+  // Show loading if we're checking auth state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-booze-cream to-booze-amber/20 p-4">

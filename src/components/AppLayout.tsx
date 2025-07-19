@@ -1,5 +1,5 @@
 
-import { useAuth } from '@/contexts/AuthContext';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,7 +39,7 @@ import {
 const AppSidebar = () => {
   const { state } = useSidebar();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user } = useSupabaseAuth();
   
   // Determine if sidebar is collapsed based on state
   const collapsed = state === "collapsed";
@@ -158,7 +158,7 @@ const AppSidebar = () => {
 };
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useSupabaseAuth();
 
   return (
     <SidebarProvider>
@@ -179,7 +179,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 flex items-center gap-2">
-                    <span className="hidden md:inline-block">{user?.name}</span>
+                    <span className="hidden md:inline-block">{user?.profile?.first_name} {user?.profile?.last_name}</span>
                     <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
                       <User size={16} />
                     </div>
@@ -195,7 +195,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     <span className="capitalize">{user?.role} at {user?.organization.name}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout}>
+                  <DropdownMenuItem onClick={signOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>

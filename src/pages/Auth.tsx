@@ -19,10 +19,16 @@ const Auth = () => {
   // Redirect if already authenticated
   useEffect(() => {
     console.log('Auth useEffect - session:', !!session, 'user:', !!user, 'loading:', loading);
+    console.log('Full session object:', session);
+    console.log('Full user object:', user);
     
     if (!loading && session && user) {
       console.log('User is authenticated, redirecting to dashboard');
       navigate('/dashboard');
+    } else if (!loading && session && !user) {
+      console.log('Session exists but no user data - this might be the issue');
+    } else if (!loading && !session) {
+      console.log('No session found');
     }
   }, [session, user, loading, navigate]);
 

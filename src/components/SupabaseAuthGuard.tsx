@@ -9,8 +9,10 @@ interface SupabaseAuthGuardProps {
 }
 
 const SupabaseAuthGuard: React.FC<SupabaseAuthGuardProps> = ({ children, allowedRoles }) => {
-  const { user, loading } = useSupabaseAuth();
+  const { user, session, loading } = useSupabaseAuth();
   const location = useLocation();
+
+  console.log('AuthGuard check - loading:', loading, 'user:', !!user, 'session:', !!session);
 
   // Show loading state while authentication is being checked
   if (loading) {
@@ -22,8 +24,21 @@ const SupabaseAuthGuard: React.FC<SupabaseAuthGuardProps> = ({ children, allowed
     );
   }
 
+  // If we have a session but no user data yet, show loading
+  // This can happen during email confirmation when user data is still being loaded
+  if (session && !user) {
+    console.log('Session exists but user data not loaded yet, showing loading...');
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-lg">Setting up your account...</span>
+      </div>
+    );
+  }
+
   // If not authenticated, redirect to auth page
   if (!user) {
+    console.log('No user found, redirecting to auth');
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 

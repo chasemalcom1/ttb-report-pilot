@@ -114,7 +114,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           organizations (*)
         `)
         .eq('user_id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single
+        .limit(1)
+        .single(); // Use single() since we now ensure there's only one role per user
 
       console.log('User role data:', userRole, 'Role error:', roleError);
 

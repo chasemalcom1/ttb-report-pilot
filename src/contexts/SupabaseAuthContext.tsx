@@ -92,12 +92,17 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors if no profile
 
       console.log('Profile data:', profile, 'Profile error:', profileError);
 
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+        return;
+      }
+
       if (!profile) {
-        console.log('No profile found for user');
+        console.log('No profile found for user, this might be expected for new users');
         return;
       }
 
@@ -109,9 +114,14 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           organizations (*)
         `)
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single
 
       console.log('User role data:', userRole, 'Role error:', roleError);
+
+      if (roleError) {
+        console.error('Error loading user role:', roleError);
+        return;
+      }
 
       if (userRole && userRole.organizations) {
         const authUser: AuthUser = {
@@ -125,6 +135,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setUser(authUser);
       } else {
         console.log('No role or organization found for user');
+        // Even if no role/org, we should still show some user state
+        // This helps with debugging
       }
     } catch (error) {
       console.error('Error loading user data:', error);

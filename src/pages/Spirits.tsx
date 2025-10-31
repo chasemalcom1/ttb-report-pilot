@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,27 +7,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { 
-  MOCK_SPIRITS, 
-  MOCK_BATCHES, 
-  SpiritType,
-  literToProofGallon,
-  addSpirit,
-  updateSpirit,
-  deleteSpirit,
-  addBatch,
-  updateBatch,
-  deleteBatch
-} from "@/lib/models";
+import { literToProofGallon } from "@/lib/models";
+import { spiritsService } from "@/lib/supabase/spirits";
+import { batchesService } from "@/lib/supabase/batches";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Edit, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
+type SpiritType = "whiskey" | "vodka" | "gin" | "rum" | "tequila" | "brandy" | "liqueur" | "wine" | "beer" | "other";
+
 const Spirits = () => {
+  const { user } = useSupabaseAuth();
+  
   // Spirit form state
   const [newSpiritOpen, setNewSpiritOpen] = useState(false);
   const [spiritName, setSpiritName] = useState("");
@@ -56,15 +51,55 @@ const Spirits = () => {
   
   // Display state
   const [selectedSpiritId, setSelectedSpiritId] = useState<string | null>(null);
-  const [spirits, setSpirits] = useState([...MOCK_SPIRITS]);
-  const [batches, setBatches] = useState([...MOCK_BATCHES]);
+  const [spirits, setSpirits] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  // Refresh data when component mounts or after adding items
+  // Load data from Supabase
   useEffect(() => {
-    setSpirits([...MOCK_SPIRITS]);
-    setBatches([...MOCK_BATCHES]);
-  }, []);
-  
+    if (!user?.organization?.id) return;
+    
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [spiritsData, batchesData] = await Promise.all([
+          spiritsService.getAll(user.organization.id),
+          batchesService.getAll(user.organization.id)
+        ]);
+        
+        setSpirits(spiritsData.map(s => ({
+          id: s.id,
+          name: s.name,
+          type: s.type,
+          defaultProof: Number(s.default_proof),
+          description: s.description,
+          active: s.active,
+          createdAt: new Date(s.created_at)
+        })));
+        
+        setBatches(batchesData.map(b => ({
+          id: b.id,
+          spiritId: b.spirit_id,
+          batchNumber: b.batch_number,
+          productionDate: new Date(b.production_date),
+          proof: Number(b.proof),
+          originalLiters: Number(b.original_liters),
+          currentLiters: Number(b.current_liters),
+          status: b.status,
+          notes: b.notes,
+          createdAt: new Date(b.created_at)
+        })));
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast.error("Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [user?.organization?.id]);
+
   // Filter batches if a spirit is selected
   const filteredBatches = batches.filter(batch => 
     selectedSpiritId ? batch.spiritId === selectedSpiritId : true
@@ -86,38 +121,55 @@ const Spirits = () => {
     }
   };
   
-  const handleAddSpirit = () => {
-    if (!spiritName || !spiritType || !spiritProof) {
+  const handleAddSpirit = async () => {
+    if (!spiritName || !spiritType || !spiritProof || !user) {
       toast.error("Please fill in all required fields");
       return;
     }
     
-    const newSpirit = {
-      id: editingSpiritId || `spirit-${Date.now()}`,
-      name: spiritName,
-      type: spiritType,
-      defaultProof: Number(spiritProof),
-      description: spiritDescription,
-      active: true,
-      createdAt: editingSpiritId ? MOCK_SPIRITS.find(s => s.id === editingSpiritId)!.createdAt : new Date(),
-    };
-    
-    if (editingSpiritId) {
-      // Update existing spirit
-      updateSpirit(newSpirit);
-      toast.success(`Spirit "${spiritName}" updated successfully`);
-    } else {
-      // Add new spirit
-      addSpirit(newSpirit);
-      toast.success(`Spirit "${spiritName}" added successfully`);
+    try {
+      if (editingSpiritId) {
+        // Update existing spirit
+        await spiritsService.update(editingSpiritId, {
+          name: spiritName,
+          type: spiritType,
+          default_proof: Number(spiritProof),
+          description: spiritDescription
+        });
+        toast.success(`Spirit "${spiritName}" updated successfully`);
+      } else {
+        // Add new spirit
+        await spiritsService.create({
+          organization_id: user.organization.id,
+          user_id: user.id,
+          name: spiritName,
+          type: spiritType,
+          default_proof: Number(spiritProof),
+          description: spiritDescription,
+          active: true
+        });
+        toast.success(`Spirit "${spiritName}" added successfully`);
+      }
+      
+      // Reload data
+      const spiritsData = await spiritsService.getAll(user.organization.id);
+      setSpirits(spiritsData.map(s => ({
+        id: s.id,
+        name: s.name,
+        type: s.type,
+        defaultProof: Number(s.default_proof),
+        description: s.description,
+        active: s.active,
+        createdAt: new Date(s.created_at)
+      })));
+      
+      // Reset form and close dialog
+      resetSpiritForm();
+      setNewSpiritOpen(false);
+    } catch (error) {
+      console.error("Error saving spirit:", error);
+      toast.error("Failed to save spirit");
     }
-    
-    // Update local state
-    setSpirits([...MOCK_SPIRITS]);
-    
-    // Reset form and close dialog
-    resetSpiritForm();
-    setNewSpiritOpen(false);
   };
   
   const handleEditSpirit = (spiritId: string) => {
@@ -138,56 +190,88 @@ const Spirits = () => {
     setDeleteSpiritDialogOpen(true);
   };
   
-  const handleDeleteSpiritConfirm = () => {
-    if (!spiritToDelete) return;
+  const handleDeleteSpiritConfirm = async () => {
+    if (!spiritToDelete || !user) return;
     
-    deleteSpirit(spiritToDelete);
-    setSpirits([...MOCK_SPIRITS]);
-    toast.success("Spirit deleted successfully");
-    
-    setDeleteSpiritDialogOpen(false);
-    setSpiritToDelete(null);
+    try {
+      await spiritsService.delete(spiritToDelete);
+      
+      // Reload data
+      const spiritsData = await spiritsService.getAll(user.organization.id);
+      setSpirits(spiritsData.map(s => ({
+        id: s.id,
+        name: s.name,
+        type: s.type,
+        defaultProof: Number(s.default_proof),
+        description: s.description,
+        active: s.active,
+        createdAt: new Date(s.created_at)
+      })));
+      
+      toast.success("Spirit deleted successfully");
+      setDeleteSpiritDialogOpen(false);
+      setSpiritToDelete(null);
+    } catch (error) {
+      console.error("Error deleting spirit:", error);
+      toast.error("Failed to delete spirit");
+    }
   };
   
-  const handleAddBatch = () => {
-    if (!batchSpiritId || !batchNumber || !batchProof || !batchLiters) {
+  const handleAddBatch = async () => {
+    if (!batchSpiritId || !batchNumber || !batchProof || !batchLiters || !user) {
       toast.error("Please fill in all required fields");
       return;
     }
     
-    const newBatch = {
-      id: editingBatchId || `batch-${Date.now()}`,
-      spiritId: batchSpiritId,
-      batchNumber,
-      productionDate: batchDate,
-      proof: Number(batchProof),
-      originalLiters: editingBatchId ? 
-        MOCK_BATCHES.find(b => b.id === editingBatchId)!.originalLiters : 
-        Number(batchLiters),
-      currentLiters: Number(batchLiters),
-      status: 'in_production' as const,
-      notes: batchNotes,
-      createdAt: editingBatchId ? 
-        MOCK_BATCHES.find(b => b.id === editingBatchId)!.createdAt : 
-        new Date(),
-    };
-    
-    if (editingBatchId) {
-      // Update existing batch
-      updateBatch(newBatch);
-      toast.success(`Batch "${batchNumber}" updated successfully`);
-    } else {
-      // Add new batch
-      addBatch(newBatch);
-      toast.success(`Batch "${batchNumber}" added successfully`);
+    try {
+      if (editingBatchId) {
+        // Update existing batch
+        await batchesService.update(editingBatchId, {
+          batch_number: batchNumber,
+          proof: Number(batchProof),
+          current_liters: Number(batchLiters),
+          notes: batchNotes
+        });
+        toast.success(`Batch "${batchNumber}" updated successfully`);
+      } else {
+        // Add new batch
+        await batchesService.create({
+          organization_id: user.organization.id,
+          user_id: user.id,
+          spirit_id: batchSpiritId,
+          batch_number: batchNumber,
+          production_date: batchDate.toISOString(),
+          proof: Number(batchProof),
+          original_liters: Number(batchLiters),
+          current_liters: Number(batchLiters),
+          status: 'in_production',
+          notes: batchNotes
+        });
+        toast.success(`Batch "${batchNumber}" added successfully`);
+      }
+      
+      // Reload data
+      const batchesData = await batchesService.getAll(user.organization.id);
+      setBatches(batchesData.map(b => ({
+        id: b.id,
+        spiritId: b.spirit_id,
+        batchNumber: b.batch_number,
+        productionDate: new Date(b.production_date),
+        proof: Number(b.proof),
+        originalLiters: Number(b.original_liters),
+        currentLiters: Number(b.current_liters),
+        status: b.status,
+        notes: b.notes,
+        createdAt: new Date(b.created_at)
+      })));
+      
+      // Reset form and close dialog
+      resetBatchForm();
+      setNewBatchOpen(false);
+    } catch (error) {
+      console.error("Error saving batch:", error);
+      toast.error("Failed to save batch");
     }
-    
-    // Update local state
-    setBatches([...MOCK_BATCHES]);
-    
-    // Reset form and close dialog
-    resetBatchForm();
-    setNewBatchOpen(false);
   };
   
   const handleEditBatch = (batchId: string) => {
@@ -212,15 +296,34 @@ const Spirits = () => {
     setDeleteBatchDialogOpen(true);
   };
   
-  const handleDeleteBatchConfirm = () => {
-    if (!batchToDelete) return;
+  const handleDeleteBatchConfirm = async () => {
+    if (!batchToDelete || !user) return;
     
-    deleteBatch(batchToDelete);
-    setBatches([...MOCK_BATCHES]);
-    toast.success("Batch deleted successfully");
-    
-    setDeleteBatchDialogOpen(false);
-    setBatchToDelete(null);
+    try {
+      await batchesService.delete(batchToDelete);
+      
+      // Reload data
+      const batchesData = await batchesService.getAll(user.organization.id);
+      setBatches(batchesData.map(b => ({
+        id: b.id,
+        spiritId: b.spirit_id,
+        batchNumber: b.batch_number,
+        productionDate: new Date(b.production_date),
+        proof: Number(b.proof),
+        originalLiters: Number(b.original_liters),
+        currentLiters: Number(b.current_liters),
+        status: b.status,
+        notes: b.notes,
+        createdAt: new Date(b.created_at)
+      })));
+      
+      toast.success("Batch deleted successfully");
+      setDeleteBatchDialogOpen(false);
+      setBatchToDelete(null);
+    } catch (error) {
+      console.error("Error deleting batch:", error);
+      toast.error("Failed to delete batch");
+    }
   };
   
   const generateBatchNumber = (spiritId: string) => {
@@ -264,6 +367,15 @@ const Spirits = () => {
     setBatchProofGallons("0");
     setBatchNotes("");
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-lg">Loading spirits...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

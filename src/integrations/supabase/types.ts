@@ -7,13 +7,158 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "12.2.12 (cd3cf9e)"
   }
   public: {
     Tables: {
+      batches: {
+        Row: {
+          batch_number: string
+          created_at: string
+          current_liters: number
+          id: string
+          notes: string | null
+          organization_id: string
+          original_liters: number
+          production_date: string
+          proof: number
+          spirit_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          current_liters: number
+          id?: string
+          notes?: string | null
+          organization_id: string
+          original_liters: number
+          production_date: string
+          proof: number
+          spirit_id: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          current_liters?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          original_liters?: number
+          production_date?: string
+          proof?: number
+          spirit_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_spirit_id_fkey"
+            columns: ["spirit_id"]
+            isOneToOne: false
+            referencedRelation: "spirits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operations: {
+        Row: {
+          batch_id: string | null
+          bottle_size: string | null
+          bottles: number | null
+          created_at: string
+          destination_or_source: string | null
+          id: string
+          liters: number
+          notes: string | null
+          operation_date: string
+          operator_id: string
+          organization_id: string
+          proof: number | null
+          proof_gallons: number
+          spirit_id: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_id?: string | null
+          bottle_size?: string | null
+          bottles?: number | null
+          created_at?: string
+          destination_or_source?: string | null
+          id?: string
+          liters: number
+          notes?: string | null
+          operation_date: string
+          operator_id: string
+          organization_id: string
+          proof?: number | null
+          proof_gallons: number
+          spirit_id?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_id?: string | null
+          bottle_size?: string | null
+          bottles?: number | null
+          created_at?: string
+          destination_or_source?: string | null
+          id?: string
+          liters?: number
+          notes?: string | null
+          operation_date?: string
+          operator_id?: string
+          organization_id?: string
+          proof?: number | null
+          proof_gallons?: number
+          spirit_id?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_spirit_id_fkey"
+            columns: ["spirit_id"]
+            isOneToOne: false
+            referencedRelation: "spirits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           address: string | null
@@ -89,6 +234,254 @@ export type Database = {
         }
         Relationships: []
       }
+      reports_5110_11: {
+        Row: {
+          beginning_inventory: number
+          bottling: number
+          created_at: string
+          ein_number: string
+          ending_inventory: number
+          id: string
+          loss: number
+          organization_id: string
+          production: number
+          proprietor_address: string
+          proprietor_name: string
+          registration_number: string
+          report_period: string
+          report_type: string
+          transfer_in: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          beginning_inventory?: number
+          bottling?: number
+          created_at?: string
+          ein_number: string
+          ending_inventory?: number
+          id?: string
+          loss?: number
+          organization_id: string
+          production?: number
+          proprietor_address: string
+          proprietor_name: string
+          registration_number: string
+          report_period: string
+          report_type: string
+          transfer_in?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          beginning_inventory?: number
+          bottling?: number
+          created_at?: string
+          ein_number?: string
+          ending_inventory?: number
+          id?: string
+          loss?: number
+          organization_id?: string
+          production?: number
+          proprietor_address?: string
+          proprietor_name?: string
+          registration_number?: string
+          report_period?: string
+          report_type?: string
+          transfer_in?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_5110_11_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports_5110_28: {
+        Row: {
+          beginning_inventory: number
+          bottling: number
+          created_at: string
+          ein_number: string
+          ending_inventory: number
+          id: string
+          organization_id: string
+          proprietor_address: string
+          proprietor_name: string
+          registration_number: string
+          report_period: string
+          report_type: string
+          tax_withdrawal: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          beginning_inventory?: number
+          bottling?: number
+          created_at?: string
+          ein_number: string
+          ending_inventory?: number
+          id?: string
+          organization_id: string
+          proprietor_address: string
+          proprietor_name: string
+          registration_number: string
+          report_period: string
+          report_type: string
+          tax_withdrawal?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          beginning_inventory?: number
+          bottling?: number
+          created_at?: string
+          ein_number?: string
+          ending_inventory?: number
+          id?: string
+          organization_id?: string
+          proprietor_address?: string
+          proprietor_name?: string
+          registration_number?: string
+          report_period?: string
+          report_type?: string
+          tax_withdrawal?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_5110_28_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports_5110_40: {
+        Row: {
+          beginning_inventory: number
+          bottling: number
+          created_at: string
+          ein_number: string
+          ending_inventory: number
+          id: string
+          loss: number
+          organization_id: string
+          production: number
+          proprietor_address: string
+          proprietor_name: string
+          registration_number: string
+          report_period: string
+          report_type: string
+          transfer_in: number
+          transfer_out: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          beginning_inventory?: number
+          bottling?: number
+          created_at?: string
+          ein_number: string
+          ending_inventory?: number
+          id?: string
+          loss?: number
+          organization_id: string
+          production?: number
+          proprietor_address: string
+          proprietor_name: string
+          registration_number: string
+          report_period: string
+          report_type: string
+          transfer_in?: number
+          transfer_out?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          beginning_inventory?: number
+          bottling?: number
+          created_at?: string
+          ein_number?: string
+          ending_inventory?: number
+          id?: string
+          loss?: number
+          organization_id?: string
+          production?: number
+          proprietor_address?: string
+          proprietor_name?: string
+          registration_number?: string
+          report_period?: string
+          report_type?: string
+          transfer_in?: number
+          transfer_out?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_5110_40_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spirits: {
+        Row: {
+          active: boolean
+          created_at: string
+          default_proof: number
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          default_proof: number
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          default_proof?: number
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spirits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -126,12 +519,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_user_role: {
-        Args: { user_id: string }
-        Returns: string
-      }
+      get_user_role: { Args: { user_id: string }; Returns: string }
       is_user_admin_of_org: {
-        Args: { user_id: string; org_id: string }
+        Args: { org_id: string; user_id: string }
         Returns: boolean
       }
     }

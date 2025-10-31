@@ -205,7 +205,7 @@ const Auth = () => {
                     />
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex-col gap-2">
                   <Button
                     type="submit"
                     className="w-full"
@@ -219,6 +219,14 @@ const Auth = () => {
                     ) : (
                       'Sign In'
                     )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    Temporary Bypass (Dev Only)
                   </Button>
                 </CardFooter>
               </form>

@@ -27,20 +27,18 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { 
-  MOCK_OPERATIONS, 
-  MOCK_SPIRITS, 
-  MOCK_BATCHES, 
-  OperationType,
-  literToProofGallon,
-  addOperation,
-  updateOperation,
-  deleteOperation
-} from "@/lib/models";
+import { OperationType, literToProofGallon } from "@/lib/models";
 import { toast } from "@/components/ui/sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useForm, FormProvider, Controller } from "react-hook-form";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+import { spiritsService } from "@/lib/supabase/spirits";
+import { batchesService } from "@/lib/supabase/batches";
+import { operationsService } from "@/lib/supabase/operations";
+import type { Database } from "@/integrations/supabase/types";
+
+type Spirit = Database['public']['Tables']['spirits']['Row'];
+type Batch = Database['public']['Tables']['batches']['Row'];
+type Operation = Database['public']['Tables']['operations']['Row'];
 
 const typeToIcon = (type: OperationType) => {
   switch(type) {
@@ -70,6 +68,7 @@ const typeToLabel = (type: OperationType) => {
 };
 
 const Operations = () => {
+  const { user } = useSupabaseAuth();
   const [searchParams] = useSearchParams();
   const initialBatchId = searchParams.get('batchId');
   
@@ -89,7 +88,10 @@ const Operations = () => {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   
-  const [operations, setOperations] = useState([...MOCK_OPERATIONS]);
+  const [spirits, setSpirits] = useState<Spirit[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [operations, setOperations] = useState<Operation[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingOperation, setEditingOperation] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -99,18 +101,40 @@ const Operations = () => {
   const filteredOperations = operations
     .filter(op => 
       (filterType === "all" || op.type === filterType) &&
-      (filterDate === undefined || format(op.date, 'yyyy-MM-dd') === format(filterDate, 'yyyy-MM-dd')) &&
+      (filterDate === undefined || format(new Date(op.operation_date), 'yyyy-MM-dd') === format(filterDate, 'yyyy-MM-dd')) &&
       (searchTerm === "" || 
         op.notes?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         op.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        MOCK_SPIRITS.find(s => s.id === op.spiritId)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        spirits.find(s => s.id === op.spirit_id)?.name.toLowerCase().includes(searchTerm.toLowerCase()))
     )
-    .sort((a, b) => b.date.getTime() - a.date.getTime());
+    .sort((a, b) => new Date(b.operation_date).getTime() - new Date(a.operation_date).getTime());
   
-  // Load operations when component mounts
+  // Load data when component mounts
   useEffect(() => {
-    setOperations([...MOCK_OPERATIONS]);
-  }, []);
+    const loadData = async () => {
+      if (!user?.organization?.id) return;
+      
+      try {
+        setLoading(true);
+        const [spiritsData, batchesData, operationsData] = await Promise.all([
+          spiritsService.getAll(user.organization.id),
+          batchesService.getAll(user.organization.id),
+          operationsService.getAll(user.organization.id)
+        ]);
+        
+        setSpirits(spiritsData);
+        setBatches(batchesData);
+        setOperations(operationsData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast.error('Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [user?.organization?.id]);
   
   const handleLitersChange = (value: string) => {
     setLiters(value);
@@ -130,9 +154,9 @@ const Operations = () => {
   
   const handleSpiritChange = (value: string) => {
     setSpiritId(value);
-    const spirit = MOCK_SPIRITS.find(s => s.id === value);
+    const spirit = spirits.find(s => s.id === value);
     if (spirit) {
-      setProof(spirit.defaultProof.toString());
+      setProof(spirit.default_proof.toString());
     }
     setBatchId("");
   };
@@ -141,9 +165,9 @@ const Operations = () => {
     setBatchId(value);
     if (value === "none" || value === "") return;
     
-    const batch = MOCK_BATCHES.find(b => b.id === value);
+    const batch = batches.find(b => b.id === value);
     if (batch) {
-      const spirit = MOCK_SPIRITS.find(s => s.id === batch.spiritId);
+      const spirit = spirits.find(s => s.id === batch.spirit_id);
       if (spirit) {
         setSpiritId(spirit.id);
       }
@@ -151,47 +175,47 @@ const Operations = () => {
     }
   };
   
-  const handleLogOperation = () => {
-    if (!spiritId || !type || !liters || Number(liters) <= 0) {
+  const handleLogOperation = async () => {
+    if (!spiritId || !type || !liters || Number(liters) <= 0 || !user) {
       toast.error("Please fill in all required fields");
       return;
     }
     
-    const newOperation = {
-      id: `temp-${Date.now()}`,
-      type,
-      date,
-      spiritId,
-      batchId: batchId && batchId !== "none" ? batchId : undefined,
-      proof: Number(proof),
-      liters: Number(liters),
-      proofGallons: Number(proofGallons),
-      bottles: type === 'bottling' ? Number(bottles) : undefined,
-      bottleSize: type === 'bottling' ? bottleSize : undefined,
-      destinationOrSource: (type === 'transfer_in' || type === 'transfer_out') ? destination : undefined,
-      notes,
-      operatorId: '1', // Mocked user ID
-      createdAt: new Date(),
-    };
-    
-    // Add to model and local storage
-    addOperation(newOperation);
-    
-    // Update local state
-    setOperations([...MOCK_OPERATIONS]);
-    
-    toast.success("Operation logged successfully");
-    
-    // Reset form fields
-    setType('production');
-    setSpiritId("");
-    setBatchId("");
-    setProof("80");
-    setLiters("0");
-    setProofGallons("0");
-    setBottles("0");
-    setDestination("");
-    setNotes("");
+    try {
+      const newOperation = await operationsService.create({
+        organization_id: user.organization.id,
+        user_id: user.id,
+        operator_id: user.id,
+        operation_date: date.toISOString(),
+        type,
+        spirit_id: spiritId || null,
+        batch_id: batchId && batchId !== "none" ? batchId : null,
+        proof: Number(proof) || null,
+        liters: Number(liters),
+        proof_gallons: Number(proofGallons),
+        bottles: type === 'bottling' ? Number(bottles) : null,
+        bottle_size: type === 'bottling' ? bottleSize : null,
+        destination_or_source: (type === 'transfer_in' || type === 'transfer_out') ? destination : null,
+        notes: notes || null,
+      });
+      
+      setOperations([newOperation, ...operations]);
+      toast.success("Operation logged successfully");
+      
+      // Reset form fields
+      setType('production');
+      setSpiritId("");
+      setBatchId("");
+      setProof("80");
+      setLiters("0");
+      setProofGallons("0");
+      setBottles("0");
+      setDestination("");
+      setNotes("");
+    } catch (error) {
+      console.error('Error logging operation:', error);
+      toast.error('Failed to log operation');
+    }
   };
   
   const handleEditOperation = (operationId: string) => {
@@ -199,56 +223,53 @@ const Operations = () => {
     if (!operation) return;
     
     setEditingOperation(operationId);
-    setDate(operation.date);
-    setType(operation.type);
-    setSpiritId(operation.spiritId || "");
-    setBatchId(operation.batchId || "");
+    setDate(new Date(operation.operation_date));
+    setType(operation.type as OperationType);
+    setSpiritId(operation.spirit_id || "");
+    setBatchId(operation.batch_id || "");
     setProof(operation.proof?.toString() || "80");
     setLiters(operation.liters.toString());
-    setProofGallons(operation.proofGallons.toString());
+    setProofGallons(operation.proof_gallons.toString());
     setBottles(operation.bottles?.toString() || "0");
-    setBottleSize(operation.bottleSize || "750ml");
-    setDestination(operation.destinationOrSource || "");
+    setBottleSize(operation.bottle_size || "750ml");
+    setDestination(operation.destination_or_source || "");
     setNotes(operation.notes || "");
     
     setIsEditDialogOpen(true);
   };
   
-  const handleSaveEdit = () => {
-    if (!editingOperation || !spiritId || !type || !liters || Number(liters) <= 0) {
+  const handleSaveEdit = async () => {
+    if (!editingOperation || !spiritId || !type || !liters || Number(liters) <= 0 || !user) {
       toast.error("Please fill in all required fields");
       return;
     }
     
-    const updatedOperation = {
-      id: editingOperation,
-      type,
-      date,
-      spiritId,
-      batchId: batchId && batchId !== "none" ? batchId : undefined,
-      proof: Number(proof),
-      liters: Number(liters),
-      proofGallons: Number(proofGallons),
-      bottles: type === 'bottling' ? Number(bottles) : undefined,
-      bottleSize: type === 'bottling' ? bottleSize : undefined,
-      destinationOrSource: (type === 'transfer_in' || type === 'transfer_out') ? destination : undefined,
-      notes,
-      operatorId: '1', // Mocked user ID
-      createdAt: new Date(),
-    };
-    
-    // Update operation in model and local storage
-    updateOperation(updatedOperation);
-    
-    // Update local state
-    setOperations([...MOCK_OPERATIONS]);
-    
-    toast.success("Operation updated successfully");
-    
-    // Reset form and close dialog
-    resetForm();
-    setIsEditDialogOpen(false);
-    setEditingOperation(null);
+    try {
+      const updatedOperation = await operationsService.update(editingOperation, {
+        operation_date: date.toISOString(),
+        type,
+        spirit_id: spiritId || null,
+        batch_id: batchId && batchId !== "none" ? batchId : null,
+        proof: Number(proof) || null,
+        liters: Number(liters),
+        proof_gallons: Number(proofGallons),
+        bottles: type === 'bottling' ? Number(bottles) : null,
+        bottle_size: type === 'bottling' ? bottleSize : null,
+        destination_or_source: (type === 'transfer_in' || type === 'transfer_out') ? destination : null,
+        notes: notes || null,
+      });
+      
+      setOperations(operations.map(op => op.id === editingOperation ? updatedOperation : op));
+      toast.success("Operation updated successfully");
+      
+      // Reset form and close dialog
+      resetForm();
+      setIsEditDialogOpen(false);
+      setEditingOperation(null);
+    } catch (error) {
+      console.error('Error updating operation:', error);
+      toast.error('Failed to update operation');
+    }
   };
   
   const handleDeletePrompt = (operationId: string) => {
@@ -256,20 +277,21 @@ const Operations = () => {
     setIsDeleteDialogOpen(true);
   };
   
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!operationToDelete) return;
     
-    // Delete operation from model and local storage
-    deleteOperation(operationToDelete);
-    
-    // Update local state
-    setOperations([...MOCK_OPERATIONS]);
-    
-    toast.success("Operation deleted successfully");
-    
-    // Close dialog
-    setIsDeleteDialogOpen(false);
-    setOperationToDelete(null);
+    try {
+      await operationsService.delete(operationToDelete);
+      setOperations(operations.filter(op => op.id !== operationToDelete));
+      toast.success("Operation deleted successfully");
+      
+      // Close dialog
+      setIsDeleteDialogOpen(false);
+      setOperationToDelete(null);
+    } catch (error) {
+      console.error('Error deleting operation:', error);
+      toast.error('Failed to delete operation');
+    }
   };
   
   const resetForm = () => {
@@ -287,8 +309,8 @@ const Operations = () => {
     setEditingOperation(null);
   };
   
-  const filteredBatches = MOCK_BATCHES.filter(batch => 
-    spiritId ? batch.spiritId === spiritId : true
+  const filteredBatches = batches.filter(batch => 
+    spiritId ? batch.spirit_id === spiritId : true
   );
 
   return (
@@ -369,7 +391,7 @@ const Operations = () => {
                       <SelectValue placeholder="Select spirit" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MOCK_SPIRITS.map(spirit => (
+                      {spirits.filter(s => s.active).map(spirit => (
                         <SelectItem key={spirit.id} value={spirit.id}>
                           {spirit.name}
                         </SelectItem>
@@ -388,7 +410,7 @@ const Operations = () => {
                       <SelectItem value="none">None (Create New)</SelectItem>
                       {filteredBatches.map(batch => (
                         <SelectItem key={batch.id} value={batch.id}>
-                          {batch.batchNumber}
+                          {batch.batch_number}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -595,20 +617,20 @@ const Operations = () => {
                       </tr>
                     ) : (
                       filteredOperations.map((op) => {
-                        const spirit = MOCK_SPIRITS.find(s => s.id === op.spiritId);
-                        const batch = MOCK_BATCHES.find(b => b.id === op.batchId);
+                        const spirit = spirits.find(s => s.id === op.spirit_id);
+                        const batch = batches.find(b => b.id === op.batch_id);
                         
                         return (
                           <tr key={op.id} className="border-b">
                             <td className="p-4">
-                              {format(op.date, "MMM d, yyyy")}
+                              {format(new Date(op.operation_date), "MMM d, yyyy")}
                             </td>
                             <td className="p-4">
                               <div className="flex items-center gap-2">
                                 <div className="bg-primary/10 p-1.5 rounded-full">
-                                  {typeToIcon(op.type)}
+                                  {typeToIcon(op.type as OperationType)}
                                 </div>
-                                <span>{typeToLabel(op.type)}</span>
+                                <span>{typeToLabel(op.type as OperationType)}</span>
                               </div>
                             </td>
                             <td className="p-4">
@@ -616,31 +638,31 @@ const Operations = () => {
                                 <div className="font-medium">{spirit?.name || 'Unknown'}</div>
                                 {batch && (
                                   <div className="text-xs text-muted-foreground">
-                                    Batch: {batch.batchNumber}
+                                    Batch: {batch.batch_number}
                                   </div>
                                 )}
                               </div>
                             </td>
                             <td className="p-4">{op.proof}</td>
                             <td className="p-4">
-                              {op.liters.toFixed(1)} L
+                              {Number(op.liters).toFixed(1)} L
                               {op.bottles && (
                                 <div className="text-xs text-muted-foreground">
-                                  {op.bottles} × {op.bottleSize}
+                                  {op.bottles} × {op.bottle_size}
                                 </div>
                               )}
                             </td>
-                            <td className="p-4">{op.proofGallons.toFixed(1)}</td>
+                            <td className="p-4">{Number(op.proof_gallons).toFixed(1)}</td>
                             <td className="p-4">
                               {op.notes && (
                                 <div className="text-xs max-w-[200px] truncate">
                                   {op.notes}
                                 </div>
                               )}
-                              {op.destinationOrSource && (
+                              {op.destination_or_source && (
                                 <div className="text-xs text-muted-foreground">
                                   {op.type === 'transfer_in' ? 'From: ' : 'To: '}
-                                  {op.destinationOrSource}
+                                  {op.destination_or_source}
                                 </div>
                               )}
                             </td>
@@ -740,7 +762,7 @@ const Operations = () => {
                     <SelectValue placeholder="Select spirit" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MOCK_SPIRITS.map(spirit => (
+                    {spirits.filter(s => s.active).map(spirit => (
                       <SelectItem key={spirit.id} value={spirit.id}>
                         {spirit.name}
                       </SelectItem>
@@ -759,7 +781,7 @@ const Operations = () => {
                     <SelectItem value="none">None</SelectItem>
                     {filteredBatches.map(batch => (
                       <SelectItem key={batch.id} value={batch.id}>
-                        {batch.batchNumber}
+                        {batch.batch_number}
                       </SelectItem>
                     ))}
                   </SelectContent>

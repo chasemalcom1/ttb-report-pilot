@@ -14,6 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
+      batches: {
+        Row: {
+          batch_number: string
+          created_at: string
+          current_liters: number
+          id: string
+          notes: string | null
+          organization_id: string
+          original_liters: number
+          production_date: string
+          proof: number
+          spirit_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          current_liters?: number
+          id?: string
+          notes?: string | null
+          organization_id: string
+          original_liters?: number
+          production_date: string
+          proof?: number
+          spirit_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          current_liters?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          original_liters?: number
+          production_date?: string
+          proof?: number
+          spirit_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_spirit_id_fkey"
+            columns: ["spirit_id"]
+            isOneToOne: false
+            referencedRelation: "spirits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operations: {
+        Row: {
+          batch_id: string | null
+          bottle_size: string | null
+          bottles: number | null
+          created_at: string
+          destination_or_source: string | null
+          id: string
+          liters: number
+          notes: string | null
+          operation_date: string
+          operator_id: string | null
+          organization_id: string
+          proof: number | null
+          proof_gallons: number
+          spirit_id: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_id?: string | null
+          bottle_size?: string | null
+          bottles?: number | null
+          created_at?: string
+          destination_or_source?: string | null
+          id?: string
+          liters?: number
+          notes?: string | null
+          operation_date: string
+          operator_id?: string | null
+          organization_id: string
+          proof?: number | null
+          proof_gallons?: number
+          spirit_id?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_id?: string | null
+          bottle_size?: string | null
+          bottles?: number | null
+          created_at?: string
+          destination_or_source?: string | null
+          id?: string
+          liters?: number
+          notes?: string | null
+          operation_date?: string
+          operator_id?: string | null
+          organization_id?: string
+          proof?: number | null
+          proof_gallons?: number
+          spirit_id?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_spirit_id_fkey"
+            columns: ["spirit_id"]
+            isOneToOne: false
+            referencedRelation: "spirits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           address: string | null
@@ -88,6 +233,176 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      reports_5110_11: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          organization_id: string
+          report_period: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id: string
+          report_period: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id?: string
+          report_period?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_5110_11_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports_5110_28: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          organization_id: string
+          report_period: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id: string
+          report_period: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id?: string
+          report_period?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_5110_28_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports_5110_40: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          organization_id: string
+          report_period: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id: string
+          report_period: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id?: string
+          report_period?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_5110_40_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spirits: {
+        Row: {
+          active: boolean
+          created_at: string
+          default_proof: number
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          default_proof?: number
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          default_proof?: number
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spirits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

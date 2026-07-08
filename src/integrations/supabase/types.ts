@@ -14,16 +14,448 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      batches: {
+        Row: {
+          batch_number: string
+          created_at: string
+          current_liters: number
+          id: string
+          notes: string | null
+          organization_id: string
+          original_liters: number
+          production_date: string
+          proof: number
+          spirit_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          current_liters?: number
+          id?: string
+          notes?: string | null
+          organization_id: string
+          original_liters?: number
+          production_date: string
+          proof?: number
+          spirit_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          current_liters?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          original_liters?: number
+          production_date?: string
+          proof?: number
+          spirit_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_spirit_id_fkey"
+            columns: ["spirit_id"]
+            isOneToOne: false
+            referencedRelation: "spirits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operations: {
+        Row: {
+          batch_id: string | null
+          bottle_size: string | null
+          bottles: number | null
+          created_at: string
+          destination_or_source: string | null
+          id: string
+          liters: number
+          notes: string | null
+          operation_date: string
+          operator_id: string | null
+          organization_id: string
+          proof: number | null
+          proof_gallons: number
+          spirit_id: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_id?: string | null
+          bottle_size?: string | null
+          bottles?: number | null
+          created_at?: string
+          destination_or_source?: string | null
+          id?: string
+          liters?: number
+          notes?: string | null
+          operation_date: string
+          operator_id?: string | null
+          organization_id: string
+          proof?: number | null
+          proof_gallons?: number
+          spirit_id?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_id?: string | null
+          bottle_size?: string | null
+          bottles?: number | null
+          created_at?: string
+          destination_or_source?: string | null
+          id?: string
+          liters?: number
+          notes?: string | null
+          operation_date?: string
+          operator_id?: string | null
+          organization_id?: string
+          proof?: number | null
+          proof_gallons?: number
+          spirit_id?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operations_spirit_id_fkey"
+            columns: ["spirit_id"]
+            isOneToOne: false
+            referencedRelation: "spirits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          dsp_number: string | null
+          ein: string | null
+          id: string
+          name: string
+          permit_number: string | null
+          phone: string | null
+          state: string | null
+          type: Database["public"]["Enums"]["org_type"]
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          dsp_number?: string | null
+          ein?: string | null
+          id?: string
+          name: string
+          permit_number?: string | null
+          phone?: string | null
+          state?: string | null
+          type: Database["public"]["Enums"]["org_type"]
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          dsp_number?: string | null
+          ein?: string | null
+          id?: string
+          name?: string
+          permit_number?: string | null
+          phone?: string | null
+          state?: string | null
+          type?: Database["public"]["Enums"]["org_type"]
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reports_5110_11: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          organization_id: string
+          report_period: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id: string
+          report_period: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id?: string
+          report_period?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_5110_11_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports_5110_28: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          organization_id: string
+          report_period: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id: string
+          report_period: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id?: string
+          report_period?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_5110_28_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports_5110_40: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          organization_id: string
+          report_period: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id: string
+          report_period: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id?: string
+          report_period?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_5110_40_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spirits: {
+        Row: {
+          active: boolean
+          created_at: string
+          default_proof: number
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          default_proof?: number
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          default_proof?: number
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spirits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_org_member: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "production" | "accounting"
+      org_type: "distillery" | "winery" | "brewery"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +582,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "production", "accounting"],
+      org_type: ["distillery", "winery", "brewery"],
+    },
   },
 } as const

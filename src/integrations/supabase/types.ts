@@ -441,6 +441,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_user_provisioning: {
+        Args: {
+          _full_name?: string
+          _organization_name?: string
+          _organization_type?: string
+          _requested_role?: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

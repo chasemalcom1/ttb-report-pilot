@@ -1,14 +1,12 @@
-
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
+import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
-import { useNavigate } from 'react-router-dom';
 
 interface Profile {
   id: string;
-  first_name: string;
-  last_name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
 }
 
@@ -16,20 +14,14 @@ interface Organization {
   id: string;
   name: string;
   type: 'distillery' | 'winery' | 'brewery';
-  dsp_number?: string;
-  permit_number?: string;
-  ein?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
-  phone?: string;
-}
-
-interface UserRole {
-  id: string;
-  role: 'admin' | 'production' | 'accounting';
-  organization_id: string;
+  dsp_number?: string | null;
+  permit_number?: string | null;
+  ein?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip_code?: string | null;
+  phone?: string | null;
 }
 
 interface AuthUser {
@@ -38,16 +30,6 @@ interface AuthUser {
   profile: Profile;
   organization: Organization;
   role: 'admin' | 'production' | 'accounting';
-}
-
-interface AuthContextType {
-  user: AuthUser | null;
-  session: Session | null;
-  loading: boolean;
-  signUp: (data: SignUpData) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
-  isAuthenticated: boolean;
 }
 
 interface SignUpData {
@@ -68,121 +50,199 @@ interface SignUpData {
   role: 'admin' | 'production' | 'accounting';
 }
 
+interface AuthContextType {
+  user: AuthUser | null;
+  session: Session | null;
+  /** Initial Supabase session check in progress */
+  authLoading: boolean;
+  /** Profile/org/role currently being loaded or provisioned */
+  profileLoading: boolean;
+  /** Non-recoverable provisioning error to surface in UI */
+  provisioningError: string | null;
+  /** Retry loading the user's profile/org/role, running recovery if needed */
+  retryProvisioning: () => Promise<void>;
+  /** Whether signup requires email confirmation before proceeding */
+  awaitingEmailConfirmation: boolean;
+  signUp: (data: SignUpData) => Promise<{ error: any; needsEmailConfirmation?: boolean }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  isAuthenticated: boolean;
+}
+
 const SupabaseAuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
-  loading: true,
+  authLoading: true,
+  profileLoading: false,
+  provisioningError: null,
+  retryProvisioning: async () => {},
+  awaitingEmailConfirmation: false,
   signUp: async () => ({ error: null }),
   signIn: async () => ({ error: null }),
   signOut: async () => {},
   isAuthenticated: false,
 });
 
+const MAX_ATTEMPTS = 5;
+const RETRY_DELAY_MS = 400;
+
 export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [provisioningError, setProvisioningError] = useState<string | null>(null);
+  const [awaitingEmailConfirmation, setAwaitingEmailConfirmation] = useState(false);
 
-  const loadUserData = async (userId: string, attempt = 0): Promise<void> => {
-    try {
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+  // Guard against concurrent load attempts / stale user ids
+  const activeLoadUserId = useRef<string | null>(null);
 
-      if (profileError) {
-        console.error('Error loading profile:', profileError);
-        return;
-      }
+  const fetchProfileAndRole = useCallback(async (userId: string) => {
+    const [{ data: profile, error: profileError }, { data: userRole, error: roleError }] =
+      await Promise.all([
+        supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+        supabase
+          .from('user_roles')
+          .select('role, organization_id, organizations(*)')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
-      const { data: userRole, error: roleError } = await supabase
-        .from('user_roles')
-        .select(`*, organizations (*)`)
-        .eq('user_id', userId)
-        .limit(1)
-        .maybeSingle();
+    if (profileError) console.error('[auth] profile query error:', profileError);
+    if (roleError) console.error('[auth] user_roles query error:', roleError);
 
-      if (roleError) {
-        console.error('Error loading user role:', roleError);
-      }
+    return { profile, userRole, profileError, roleError };
+  }, []);
 
-      if (profile && userRole && userRole.organizations) {
-        setUser({
-          id: userId,
-          email: profile.email,
-          profile,
-          organization: userRole.organizations as Organization,
-          role: userRole.role as 'admin' | 'production' | 'accounting',
+  const loadUserData = useCallback(
+    async (userId: string) => {
+      activeLoadUserId.current = userId;
+      setProfileLoading(true);
+      setProvisioningError(null);
+
+      try {
+        let lastErr: any = null;
+
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+          if (activeLoadUserId.current !== userId) return; // superseded
+          const { profile, userRole, profileError, roleError } = await fetchProfileAndRole(userId);
+          lastErr = profileError || roleError;
+
+          if (profile && userRole && userRole.organizations) {
+            if (activeLoadUserId.current !== userId) return;
+            setUser({
+              id: userId,
+              email: profile.email,
+              profile,
+              organization: userRole.organizations as unknown as Organization,
+              role: userRole.role as AuthUser['role'],
+            });
+            setProfileLoading(false);
+            return;
+          }
+
+          if (attempt < MAX_ATTEMPTS - 1) {
+            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+          }
+        }
+
+        // Final attempt: run server-side recovery
+        console.warn('[auth] profile/role not found after retries; attempting recovery RPC');
+        const { error: rpcError } = await supabase.rpc('ensure_user_provisioning', {
+          _organization_name: null,
+          _organization_type: null,
+          _requested_role: null,
+          _full_name: null,
         });
-        return;
-      }
+        if (rpcError) {
+          console.error('[auth] ensure_user_provisioning error:', rpcError);
+          lastErr = rpcError;
+        } else {
+          const { profile, userRole } = await fetchProfileAndRole(userId);
+          if (profile && userRole && userRole.organizations) {
+            setUser({
+              id: userId,
+              email: profile.email,
+              profile,
+              organization: userRole.organizations as unknown as Organization,
+              role: userRole.role as AuthUser['role'],
+            });
+            setProfileLoading(false);
+            return;
+          }
+        }
 
-      // Retry a couple of times — trigger may still be writing rows right after signup.
-      if (attempt < 3) {
-        await new Promise((r) => setTimeout(r, 500));
-        return loadUserData(userId, attempt + 1);
+        setProvisioningError(
+          lastErr?.message ||
+            'We could not finish setting up your account. Please retry or sign out and try again.'
+        );
+      } catch (error: any) {
+        console.error('[auth] loadUserData exception:', error);
+        setProvisioningError(error?.message || 'Unexpected error loading your account.');
+      } finally {
+        setProfileLoading(false);
       }
-      console.warn('User data incomplete after retries', { hasProfile: !!profile, hasRole: !!userRole });
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    }
-  };
+    },
+    [fetchProfileAndRole]
+  );
 
   useEffect(() => {
-    console.log('Setting up auth state listener');
-    
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        
-        if (session?.user) {
-          console.log('User session found, loading user data');
-          // Defer data loading to prevent deadlocks
-          setTimeout(() => {
-            loadUserData(session.user.id);
-          }, 0);
-        } else {
-          console.log('No user session, clearing user data');
-          setUser(null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
-      setSession(session);
-      if (session?.user) {
+    // Single onAuthStateChange listener. Only sync state here — never await.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (import.meta.env.DEV) console.log('[auth] event:', event, nextSession?.user?.email);
+      setSession(nextSession);
+      if (nextSession?.user) {
+        setAwaitingEmailConfirmation(false);
+        // Defer to avoid deadlocks inside the callback
         setTimeout(() => {
-          loadUserData(session.user.id);
+          void loadUserData(nextSession.user.id);
         }, 0);
+      } else {
+        activeLoadUserId.current = null;
+        setUser(null);
+        setProvisioningError(null);
+        setProfileLoading(false);
       }
-      setLoading(false);
+    });
+
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session: initial } }) => {
+      setSession(initial);
+      if (initial?.user) {
+        void loadUserData(initial.user.id);
+      }
+      setAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadUserData]);
+
+  const retryProvisioning = useCallback(async () => {
+    if (session?.user) {
+      await loadUserData(session.user.id);
+    }
+  }, [session, loadUserData]);
 
   const signUp = async (data: SignUpData) => {
     try {
-      console.log('Starting signup process for:', data.email);
+      const email = data.email.trim();
+      const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim();
 
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
+        email,
         password: data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
-            first_name: data.firstName,
-            last_name: data.lastName,
+            // canonical keys
+            full_name: fullName,
             organization_name: data.organizationName,
             organization_type: data.organizationType,
-            role: data.role,
+            requested_role: data.role,
+            // convenience / legacy keys still stored for the trigger
+            first_name: data.firstName,
+            last_name: data.lastName,
             dsp_number: data.dspNumber ?? '',
             permit_number: data.permitNumber ?? '',
             ein: data.ein ?? '',
@@ -196,41 +256,44 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       });
 
       if (authError) {
-        console.error('Auth signup error:', authError);
+        if (import.meta.env.DEV) console.error('[auth] signUp error:', authError);
         return { error: authError };
       }
 
       if (!authData.user) {
-        return { error: new Error('No user data returned') };
+        return { error: new Error('No user returned from signup') };
       }
 
-      console.log('User created:', authData.user.id);
-      toast.success('Account created!');
-      return { error: null };
+      // If a session came back, we are signed in (email confirmation disabled).
+      if (authData.session) {
+        toast.success('Account created!');
+        return { error: null, needsEmailConfirmation: false };
+      }
+
+      // Otherwise the user must confirm their email before signing in.
+      setAwaitingEmailConfirmation(true);
+      toast.success('Check your email to confirm your account before signing in.');
+      return { error: null, needsEmailConfirmation: true };
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('[auth] signUp exception:', error);
       return { error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Attempting to sign in:', email);
-      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email.trim(),
+        password, // never trim the password
       });
-
-      console.log('Sign in result:', { user: data.user?.id, error });
-
-      if (error) return { error };
-
-      // The navigation will be handled by the auth state change
-      console.log('Sign in successful, auth state change should trigger navigation');
+      if (error) {
+        if (import.meta.env.DEV) console.error('[auth] signIn error:', error);
+        return { error };
+      }
+      if (import.meta.env.DEV) console.log('[auth] signIn ok:', data.user?.id);
       return { error: null };
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error('[auth] signIn exception:', error);
       return { error };
     }
   };
@@ -238,11 +301,14 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      // Listener will clear user/session; clear proactively too.
+      activeLoadUserId.current = null;
       setUser(null);
       setSession(null);
-      toast.success('Logged out successfully');
+      setProvisioningError(null);
+      toast.success('Signed out');
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('[auth] signOut error:', error);
     }
   };
 
@@ -251,7 +317,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       value={{
         user,
         session,
-        loading,
+        authLoading,
+        profileLoading,
+        provisioningError,
+        retryProvisioning,
+        awaitingEmailConfirmation,
         signUp,
         signIn,
         signOut,

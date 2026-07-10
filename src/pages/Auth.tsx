@@ -13,24 +13,16 @@ import { Loader2, Building2 } from 'lucide-react';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, session, user, loading } = useSupabaseAuth();
+  const { signIn, signUp, session, authLoading } = useSupabaseAuth();
   const navigate = useNavigate();
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (session presence is enough; the guard
+  // handles profile provisioning on the destination page).
   useEffect(() => {
-    console.log('Auth useEffect - session:', !!session, 'user:', !!user, 'loading:', loading);
-    console.log('Full session object:', session);
-    console.log('Full user object:', user);
-    
-    if (!loading && session && user) {
-      console.log('User is authenticated, redirecting to dashboard');
-      navigate('/dashboard');
-    } else if (!loading && session && !user) {
-      console.log('Session exists but no user data - this might be the issue');
-    } else if (!loading && !session) {
-      console.log('No session found');
+    if (!authLoading && session) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [session, user, loading, navigate]);
+  }, [session, authLoading, navigate]);
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -146,7 +138,7 @@ const Auth = () => {
   };
 
   // Show loading if we're checking auth state
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

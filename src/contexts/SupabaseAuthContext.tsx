@@ -83,62 +83,47 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadUserData = async (userId: string) => {
+  const loadUserData = async (userId: string, attempt = 0): Promise<void> => {
     try {
-      console.log('Loading user data for:', userId);
-      
-      // Get user profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid errors if no profile
-
-      console.log('Profile data:', profile, 'Profile error:', profileError);
+        .maybeSingle();
 
       if (profileError) {
         console.error('Error loading profile:', profileError);
         return;
       }
 
-      if (!profile) {
-        console.log('No profile found for user, this might be expected for new users');
-        return;
-      }
-
-      // Get user role and organization
       const { data: userRole, error: roleError } = await supabase
         .from('user_roles')
-        .select(`
-          *,
-          organizations (*)
-        `)
+        .select(`*, organizations (*)`)
         .eq('user_id', userId)
         .limit(1)
-        .single(); // Use single() since we now ensure there's only one role per user
-
-      console.log('User role data:', userRole, 'Role error:', roleError);
+        .maybeSingle();
 
       if (roleError) {
         console.error('Error loading user role:', roleError);
-        return;
       }
 
-      if (userRole && userRole.organizations) {
-        const authUser: AuthUser = {
+      if (profile && userRole && userRole.organizations) {
+        setUser({
           id: userId,
           email: profile.email,
           profile,
           organization: userRole.organizations as Organization,
           role: userRole.role as 'admin' | 'production' | 'accounting',
-        };
-        console.log('Setting auth user:', authUser);
-        setUser(authUser);
-      } else {
-        console.log('No role or organization found for user');
-        // Even if no role/org, we should still show some user state
-        // This helps with debugging
+        });
+        return;
       }
+
+      // Retry a couple of times — trigger may still be writing rows right after signup.
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 500));
+        return loadUserData(userId, attempt + 1);
+      }
+      console.warn('User data incomplete after retries', { hasProfile: !!profile, hasRole: !!userRole });
     } catch (error) {
       console.error('Error loading user data:', error);
     }

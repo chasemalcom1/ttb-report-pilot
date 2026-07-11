@@ -86,22 +86,54 @@ async function fetchMonthOperations(organizationId: string, reportPeriod: Date) 
   return data ?? [];
 }
 
+type ReportRow = {
+  id: string;
+  data: any;
+  updated_at: string;
+  report_period: string;
+};
+
 async function fetchPersistedReport(
   organizationId: string,
   formType: FormType,
   reportPeriod: Date,
-) {
-  const { data, error } = await supabase
-    .from(TABLE_BY_FORM[formType])
+): Promise<ReportRow | null> {
+  const key = periodKey(reportPeriod);
+  const q =
+    formType === '5110-40'
+      ? supabase.from('reports_5110_40')
+      : formType === '5110-28'
+      ? supabase.from('reports_5110_28')
+      : supabase.from('reports_5110_11');
+  const { data, error } = await q
     .select('*')
     .eq('organization_id', organizationId)
-    .eq('report_period', periodKey(reportPeriod))
+    .eq('report_period', key)
     .maybeSingle();
   if (error) throw error;
-  return data as
-    | { id: string; data: any; updated_at: string; report_period: string }
-    | null;
+  return (data as ReportRow | null) ?? null;
 }
+
+type UpsertPayload = {
+  organization_id: string;
+  user_id: string;
+  report_period: string;
+  data: any;
+};
+
+async function upsertReportRow(formType: FormType, payload: UpsertPayload): Promise<ReportRow> {
+  const opts = { onConflict: 'organization_id,report_period' };
+  const q =
+    formType === '5110-40'
+      ? supabase.from('reports_5110_40').upsert(payload, opts)
+      : formType === '5110-28'
+      ? supabase.from('reports_5110_28').upsert(payload, opts)
+      : supabase.from('reports_5110_11').upsert(payload, opts);
+  const { data, error } = await q.select().single();
+  if (error) throw error;
+  return data as ReportRow;
+}
+
 
 async function calculateInventory(
   organizationId: string,

@@ -202,22 +202,14 @@ export async function getOrCreateReport<T extends ReportData>(
     inventory,
   };
 
-  const { data: upserted, error } = await supabase
-    .from(TABLE_BY_FORM[formType])
-    .upsert(
-      {
-        organization_id: organizationId,
-        user_id: userId,
-        report_period: periodKey(reportPeriod),
-        data: nextData,
-      },
-      { onConflict: 'organization_id,report_period' },
-    )
-    .select()
-    .single();
-  if (error) throw error;
+  const upserted = await upsertReportRow(formType, {
+    organization_id: organizationId,
+    user_id: userId,
+    report_period: periodKey(reportPeriod),
+    data: nextData,
+  });
 
-  return rowToReport(formType, reportPeriod, upserted as any, inventory);
+  return rowToReport(formType, reportPeriod, upserted, inventory);
 }
 
 /**

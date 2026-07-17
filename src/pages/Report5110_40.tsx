@@ -79,10 +79,28 @@ const Report5110_40 = () => {
     }
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     const fileName = `TTB_5110_40_${format(reportPeriod, "yyyy-MM")}.pdf`;
-    toast.success("Downloading TTB Form 5110.40", { description: `Preparing ${fileName}` });
+    try {
+      const [{ generateTtbPdf, downloadPdf }, { form5110_40Definition }] = await Promise.all([
+        import("@/lib/pdf/ttbPdfService"),
+        import("@/lib/pdf/forms/f5110-40"),
+      ]);
+      // TEMP: hard-coded test values — foundation smoke test for field placement.
+      const bytes = await generateTtbPdf(form5110_40Definition, {
+        proprietorName: "TEST DISTILLERY LLC",
+        monthAndYear: format(reportPeriod, "MMMM yyyy"),
+        locationOfPlant: "123 Test St, Louisville, KY 40202",
+        plantNumberDsp: "DSP-KY-20001",
+      });
+      downloadPdf(bytes, fileName);
+      toast.success("Generated TTB Form 5110.40 (test values)", { description: fileName });
+    } catch (err: any) {
+      console.error("[report 5110-40] pdf error", err);
+      toast.error(err?.message || "Failed to generate PDF");
+    }
   };
+
   const handlePrintReport = () => {
     toast.success("Preparing TTB Form 5110.40 for printing");
     setTimeout(() => window.print(), 300);

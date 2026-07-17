@@ -87,9 +87,11 @@ export async function generateTtbPdf(
     }
   }
 
-  // Flatten so the values appear as static content (and the form is no longer
-  // editable) — matches how a submitted TTB form should render.
-  form.flatten();
+  // Flatten so any AcroForm fills render as static content. Wrapped because
+  // some TTB templates have malformed form dictionaries that pdf-lib can't
+  // fully walk — overlay drawing is unaffected either way.
+  try { form.flatten(); } catch (err) { console.warn('[ttbPdf] form.flatten skipped', err); }
+
 
   return pdf.save();
 }

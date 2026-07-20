@@ -978,6 +978,51 @@ const Operations = () => {
                 />
               </div>
             )}
+
+            {type === 'production' && (
+              <div className="space-y-2">
+                <Label>Production source *</Label>
+                <Select value={productionSource} onValueChange={(v) => setProductionSource(v as ProductionSource)}>
+                  <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+                  <SelectContent>
+                    {PRODUCTION_SOURCES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {type === 'transfer_out' && (
+              <div className="space-y-2">
+                <Label>Transfer destination *</Label>
+                <Select value={transferDestination} onValueChange={(v) => setTransferDestination(v as TransferDestination)}>
+                  <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
+                  <SelectContent>
+                    {TRANSFER_DESTINATIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {type === 'loss' && (
+              <div className="space-y-2">
+                <Label>Loss reason *</Label>
+                <Select value={lossReason} onValueChange={(v) => setLossReason(v as LossReason)}>
+                  <SelectTrigger><SelectValue placeholder="Select reason" /></SelectTrigger>
+                  <SelectContent>
+                    {LOSS_REASONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Kind of spirit (TTB column)</Label>
+              <Select value={kindOfSpirit} onValueChange={(v) => setKindOfSpirit(v as KindOfSpirit)}>
+                <SelectTrigger><SelectValue placeholder="Select kind" /></SelectTrigger>
+                <SelectContent>
+                  {KINDS_OF_SPIRIT.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+
             
             <div className="space-y-2">
               <Label htmlFor="edit-notes">Notes</Label>

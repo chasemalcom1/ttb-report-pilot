@@ -94,6 +94,10 @@ const Operations = () => {
   const [bottleSize, setBottleSize] = useState<string>("750ml");
   const [destination, setDestination] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [productionSource, setProductionSource] = useState<ProductionSource | "">("");
+  const [transferDestination, setTransferDestination] = useState<TransferDestination | "">("");
+  const [lossReason, setLossReason] = useState<LossReason | "">("");
+  const [kindOfSpirit, setKindOfSpirit] = useState<KindOfSpirit | "">("");
   
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filterType, setFilterType] = useState<string>("all");

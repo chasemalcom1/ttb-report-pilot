@@ -243,6 +243,10 @@ const Operations = () => {
       setBottles("0");
       setDestination("");
       setNotes("");
+      setProductionSource("");
+      setTransferDestination("");
+      setLossReason("");
+      setKindOfSpirit("");
     } catch (error) {
       console.error('Error logging operation:', error);
       toast.error('Failed to log operation');

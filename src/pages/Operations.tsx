@@ -362,8 +362,13 @@ const Operations = () => {
     setBottleSize("750ml");
     setDestination("");
     setNotes("");
+    setProductionSource("");
+    setTransferDestination("");
+    setLossReason("");
+    setKindOfSpirit("");
     setEditingOperation(null);
   };
+
   
   const filteredBatches = batches.filter(batch => 
     spiritId ? batch.spirit_id === spiritId : true

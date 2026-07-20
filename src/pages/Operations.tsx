@@ -35,10 +35,21 @@ import { spiritsService } from "@/lib/supabase/spirits";
 import { batchesService } from "@/lib/supabase/batches";
 import { operationsService } from "@/lib/supabase/operations";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  PRODUCTION_SOURCES,
+  TRANSFER_DESTINATIONS,
+  LOSS_REASONS,
+  KINDS_OF_SPIRIT,
+  type ProductionSource,
+  type TransferDestination,
+  type LossReason,
+  type KindOfSpirit,
+} from "@/lib/ttb/classifications";
 
 type Spirit = Database['public']['Tables']['spirits']['Row'];
 type Batch = Database['public']['Tables']['batches']['Row'];
 type Operation = Database['public']['Tables']['operations']['Row'];
+
 
 const typeToIcon = (type: OperationType) => {
   switch(type) {

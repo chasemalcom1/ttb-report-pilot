@@ -35,10 +35,21 @@ import { spiritsService } from "@/lib/supabase/spirits";
 import { batchesService } from "@/lib/supabase/batches";
 import { operationsService } from "@/lib/supabase/operations";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  PRODUCTION_SOURCES,
+  TRANSFER_DESTINATIONS,
+  LOSS_REASONS,
+  KINDS_OF_SPIRIT,
+  type ProductionSource,
+  type TransferDestination,
+  type LossReason,
+  type KindOfSpirit,
+} from "@/lib/ttb/classifications";
 
 type Spirit = Database['public']['Tables']['spirits']['Row'];
 type Batch = Database['public']['Tables']['batches']['Row'];
 type Operation = Database['public']['Tables']['operations']['Row'];
+
 
 const typeToIcon = (type: OperationType) => {
   switch(type) {
@@ -83,6 +94,10 @@ const Operations = () => {
   const [bottleSize, setBottleSize] = useState<string>("750ml");
   const [destination, setDestination] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [productionSource, setProductionSource] = useState<ProductionSource | "">("");
+  const [transferDestination, setTransferDestination] = useState<TransferDestination | "">("");
+  const [lossReason, setLossReason] = useState<LossReason | "">("");
+  const [kindOfSpirit, setKindOfSpirit] = useState<KindOfSpirit | "">("");
   
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filterType, setFilterType] = useState<string>("all");
@@ -180,7 +195,19 @@ const Operations = () => {
       toast.error("Please fill in all required fields");
       return;
     }
-    
+    if (type === 'production' && !productionSource) {
+      toast.error("Select a production source (distillation or redistillation)");
+      return;
+    }
+    if (type === 'transfer_out' && !transferDestination) {
+      toast.error("Select a transfer destination");
+      return;
+    }
+    if (type === 'loss' && !lossReason) {
+      toast.error("Select a loss reason");
+      return;
+    }
+
     try {
       const newOperation = await operationsService.create({
         organization_id: user.organization.id,
@@ -196,6 +223,10 @@ const Operations = () => {
         bottles: type === 'bottling' ? Number(bottles) : null,
         bottle_size: type === 'bottling' ? bottleSize : null,
         destination_or_source: (type === 'transfer_in' || type === 'transfer_out') ? destination : null,
+        production_source: type === 'production' ? productionSource : null,
+        transfer_destination: type === 'transfer_out' ? transferDestination : null,
+        loss_reason: type === 'loss' ? lossReason : null,
+        kind_of_spirit: kindOfSpirit || null,
         notes: notes || null,
       });
       
@@ -212,6 +243,10 @@ const Operations = () => {
       setBottles("0");
       setDestination("");
       setNotes("");
+      setProductionSource("");
+      setTransferDestination("");
+      setLossReason("");
+      setKindOfSpirit("");
     } catch (error) {
       console.error('Error logging operation:', error);
       toast.error('Failed to log operation');
@@ -234,6 +269,10 @@ const Operations = () => {
     setBottleSize(operation.bottle_size || "750ml");
     setDestination(operation.destination_or_source || "");
     setNotes(operation.notes || "");
+    setProductionSource((operation.production_source as ProductionSource) || "");
+    setTransferDestination((operation.transfer_destination as TransferDestination) || "");
+    setLossReason((operation.loss_reason as LossReason) || "");
+    setKindOfSpirit((operation.kind_of_spirit as KindOfSpirit) || "");
     
     setIsEditDialogOpen(true);
   };
@@ -241,6 +280,18 @@ const Operations = () => {
   const handleSaveEdit = async () => {
     if (!editingOperation || !spiritId || !type || !liters || Number(liters) <= 0 || !user) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+    if (type === 'production' && !productionSource) {
+      toast.error("Select a production source (distillation or redistillation)");
+      return;
+    }
+    if (type === 'transfer_out' && !transferDestination) {
+      toast.error("Select a transfer destination");
+      return;
+    }
+    if (type === 'loss' && !lossReason) {
+      toast.error("Select a loss reason");
       return;
     }
     
@@ -256,6 +307,10 @@ const Operations = () => {
         bottles: type === 'bottling' ? Number(bottles) : null,
         bottle_size: type === 'bottling' ? bottleSize : null,
         destination_or_source: (type === 'transfer_in' || type === 'transfer_out') ? destination : null,
+        production_source: type === 'production' ? productionSource : null,
+        transfer_destination: type === 'transfer_out' ? transferDestination : null,
+        loss_reason: type === 'loss' ? lossReason : null,
+        kind_of_spirit: kindOfSpirit || null,
         notes: notes || null,
       });
       
@@ -271,6 +326,7 @@ const Operations = () => {
       toast.error('Failed to update operation');
     }
   };
+
   
   const handleDeletePrompt = (operationId: string) => {
     setOperationToDelete(operationId);
@@ -306,8 +362,13 @@ const Operations = () => {
     setBottleSize("750ml");
     setDestination("");
     setNotes("");
+    setProductionSource("");
+    setTransferDestination("");
+    setLossReason("");
+    setKindOfSpirit("");
     setEditingOperation(null);
   };
+
   
   const filteredBatches = batches.filter(batch => 
     spiritId ? batch.spirit_id === spiritId : true
@@ -499,6 +560,54 @@ const Operations = () => {
                     />
                   </div>
                 )}
+
+                {type === 'production' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="productionSource">Production source <span className="text-destructive">*</span></Label>
+                    <Select value={productionSource} onValueChange={(v) => setProductionSource(v as ProductionSource)}>
+                      <SelectTrigger id="productionSource"><SelectValue placeholder="Select source" /></SelectTrigger>
+                      <SelectContent>
+                        {PRODUCTION_SOURCES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {type === 'transfer_out' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="transferDestination">Transfer destination <span className="text-destructive">*</span></Label>
+                    <Select value={transferDestination} onValueChange={(v) => setTransferDestination(v as TransferDestination)}>
+                      <SelectTrigger id="transferDestination"><SelectValue placeholder="Select destination" /></SelectTrigger>
+                      <SelectContent>
+                        {TRANSFER_DESTINATIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {type === 'loss' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="lossReason">Loss reason <span className="text-destructive">*</span></Label>
+                    <Select value={lossReason} onValueChange={(v) => setLossReason(v as LossReason)}>
+                      <SelectTrigger id="lossReason"><SelectValue placeholder="Select reason" /></SelectTrigger>
+                      <SelectContent>
+                        {LOSS_REASONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="kindOfSpirit">Kind of spirit (TTB column)</Label>
+                  <Select value={kindOfSpirit} onValueChange={(v) => setKindOfSpirit(v as KindOfSpirit)}>
+                    <SelectTrigger id="kindOfSpirit"><SelectValue placeholder="Select kind" /></SelectTrigger>
+                    <SelectContent>
+                      {KINDS_OF_SPIRIT.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+
                 
                 <div className="space-y-2 sm:col-span-2 md:col-span-3">
                   <Label htmlFor="notes">Notes</Label>
@@ -869,6 +978,51 @@ const Operations = () => {
                 />
               </div>
             )}
+
+            {type === 'production' && (
+              <div className="space-y-2">
+                <Label>Production source *</Label>
+                <Select value={productionSource} onValueChange={(v) => setProductionSource(v as ProductionSource)}>
+                  <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+                  <SelectContent>
+                    {PRODUCTION_SOURCES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {type === 'transfer_out' && (
+              <div className="space-y-2">
+                <Label>Transfer destination *</Label>
+                <Select value={transferDestination} onValueChange={(v) => setTransferDestination(v as TransferDestination)}>
+                  <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
+                  <SelectContent>
+                    {TRANSFER_DESTINATIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {type === 'loss' && (
+              <div className="space-y-2">
+                <Label>Loss reason *</Label>
+                <Select value={lossReason} onValueChange={(v) => setLossReason(v as LossReason)}>
+                  <SelectTrigger><SelectValue placeholder="Select reason" /></SelectTrigger>
+                  <SelectContent>
+                    {LOSS_REASONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Kind of spirit (TTB column)</Label>
+              <Select value={kindOfSpirit} onValueChange={(v) => setKindOfSpirit(v as KindOfSpirit)}>
+                <SelectTrigger><SelectValue placeholder="Select kind" /></SelectTrigger>
+                <SelectContent>
+                  {KINDS_OF_SPIRIT.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+
             
             <div className="space-y-2">
               <Label htmlFor="edit-notes">Notes</Label>

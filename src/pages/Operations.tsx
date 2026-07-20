@@ -269,6 +269,10 @@ const Operations = () => {
     setBottleSize(operation.bottle_size || "750ml");
     setDestination(operation.destination_or_source || "");
     setNotes(operation.notes || "");
+    setProductionSource((operation.production_source as ProductionSource) || "");
+    setTransferDestination((operation.transfer_destination as TransferDestination) || "");
+    setLossReason((operation.loss_reason as LossReason) || "");
+    setKindOfSpirit((operation.kind_of_spirit as KindOfSpirit) || "");
     
     setIsEditDialogOpen(true);
   };
@@ -276,6 +280,18 @@ const Operations = () => {
   const handleSaveEdit = async () => {
     if (!editingOperation || !spiritId || !type || !liters || Number(liters) <= 0 || !user) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+    if (type === 'production' && !productionSource) {
+      toast.error("Select a production source (distillation or redistillation)");
+      return;
+    }
+    if (type === 'transfer_out' && !transferDestination) {
+      toast.error("Select a transfer destination");
+      return;
+    }
+    if (type === 'loss' && !lossReason) {
+      toast.error("Select a loss reason");
       return;
     }
     
@@ -291,6 +307,10 @@ const Operations = () => {
         bottles: type === 'bottling' ? Number(bottles) : null,
         bottle_size: type === 'bottling' ? bottleSize : null,
         destination_or_source: (type === 'transfer_in' || type === 'transfer_out') ? destination : null,
+        production_source: type === 'production' ? productionSource : null,
+        transfer_destination: type === 'transfer_out' ? transferDestination : null,
+        loss_reason: type === 'loss' ? lossReason : null,
+        kind_of_spirit: kindOfSpirit || null,
         notes: notes || null,
       });
       
@@ -306,6 +326,7 @@ const Operations = () => {
       toast.error('Failed to update operation');
     }
   };
+
   
   const handleDeletePrompt = (operationId: string) => {
     setOperationToDelete(operationId);

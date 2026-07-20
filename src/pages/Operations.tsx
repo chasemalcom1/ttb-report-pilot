@@ -560,6 +560,54 @@ const Operations = () => {
                     />
                   </div>
                 )}
+
+                {type === 'production' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="productionSource">Production source <span className="text-destructive">*</span></Label>
+                    <Select value={productionSource} onValueChange={(v) => setProductionSource(v as ProductionSource)}>
+                      <SelectTrigger id="productionSource"><SelectValue placeholder="Select source" /></SelectTrigger>
+                      <SelectContent>
+                        {PRODUCTION_SOURCES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {type === 'transfer_out' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="transferDestination">Transfer destination <span className="text-destructive">*</span></Label>
+                    <Select value={transferDestination} onValueChange={(v) => setTransferDestination(v as TransferDestination)}>
+                      <SelectTrigger id="transferDestination"><SelectValue placeholder="Select destination" /></SelectTrigger>
+                      <SelectContent>
+                        {TRANSFER_DESTINATIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {type === 'loss' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="lossReason">Loss reason <span className="text-destructive">*</span></Label>
+                    <Select value={lossReason} onValueChange={(v) => setLossReason(v as LossReason)}>
+                      <SelectTrigger id="lossReason"><SelectValue placeholder="Select reason" /></SelectTrigger>
+                      <SelectContent>
+                        {LOSS_REASONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="kindOfSpirit">Kind of spirit (TTB column)</Label>
+                  <Select value={kindOfSpirit} onValueChange={(v) => setKindOfSpirit(v as KindOfSpirit)}>
+                    <SelectTrigger id="kindOfSpirit"><SelectValue placeholder="Select kind" /></SelectTrigger>
+                    <SelectContent>
+                      {KINDS_OF_SPIRIT.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+
                 
                 <div className="space-y-2 sm:col-span-2 md:col-span-3">
                   <Label htmlFor="notes">Notes</Label>

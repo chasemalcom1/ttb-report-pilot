@@ -85,14 +85,18 @@ export type Database = {
           created_at: string
           destination_or_source: string | null
           id: string
+          kind_of_spirit: string | null
           liters: number
+          loss_reason: string | null
           notes: string | null
           operation_date: string
           operator_id: string | null
           organization_id: string
+          production_source: string | null
           proof: number | null
           proof_gallons: number
           spirit_id: string | null
+          transfer_destination: string | null
           type: string
           updated_at: string
           user_id: string
@@ -104,14 +108,18 @@ export type Database = {
           created_at?: string
           destination_or_source?: string | null
           id?: string
+          kind_of_spirit?: string | null
           liters?: number
+          loss_reason?: string | null
           notes?: string | null
           operation_date: string
           operator_id?: string | null
           organization_id: string
+          production_source?: string | null
           proof?: number | null
           proof_gallons?: number
           spirit_id?: string | null
+          transfer_destination?: string | null
           type: string
           updated_at?: string
           user_id: string
@@ -123,14 +131,18 @@ export type Database = {
           created_at?: string
           destination_or_source?: string | null
           id?: string
+          kind_of_spirit?: string | null
           liters?: number
+          loss_reason?: string | null
           notes?: string | null
           operation_date?: string
           operator_id?: string | null
           organization_id?: string
+          production_source?: string | null
           proof?: number | null
           proof_gallons?: number
           spirit_id?: string | null
+          transfer_destination?: string | null
           type?: string
           updated_at?: string
           user_id?: string
@@ -163,13 +175,19 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          county: string | null
           created_at: string
           dsp_number: string | null
           ein: string | null
           id: string
+          legal_name: string | null
           name: string
           permit_number: string | null
           phone: string | null
+          signer_name: string | null
+          signer_title: string | null
           state: string | null
           type: Database["public"]["Enums"]["org_type"]
           updated_at: string
@@ -178,13 +196,19 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          county?: string | null
           created_at?: string
           dsp_number?: string | null
           ein?: string | null
           id?: string
+          legal_name?: string | null
           name: string
           permit_number?: string | null
           phone?: string | null
+          signer_name?: string | null
+          signer_title?: string | null
           state?: string | null
           type: Database["public"]["Enums"]["org_type"]
           updated_at?: string
@@ -193,13 +217,19 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          county?: string | null
           created_at?: string
           dsp_number?: string | null
           ein?: string | null
           id?: string
+          legal_name?: string | null
           name?: string
           permit_number?: string | null
           phone?: string | null
+          signer_name?: string | null
+          signer_title?: string | null
           state?: string | null
           type?: Database["public"]["Enums"]["org_type"]
           updated_at?: string

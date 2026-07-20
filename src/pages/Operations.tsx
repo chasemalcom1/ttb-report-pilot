@@ -195,7 +195,19 @@ const Operations = () => {
       toast.error("Please fill in all required fields");
       return;
     }
-    
+    if (type === 'production' && !productionSource) {
+      toast.error("Select a production source (distillation or redistillation)");
+      return;
+    }
+    if (type === 'transfer_out' && !transferDestination) {
+      toast.error("Select a transfer destination");
+      return;
+    }
+    if (type === 'loss' && !lossReason) {
+      toast.error("Select a loss reason");
+      return;
+    }
+
     try {
       const newOperation = await operationsService.create({
         organization_id: user.organization.id,
@@ -211,6 +223,10 @@ const Operations = () => {
         bottles: type === 'bottling' ? Number(bottles) : null,
         bottle_size: type === 'bottling' ? bottleSize : null,
         destination_or_source: (type === 'transfer_in' || type === 'transfer_out') ? destination : null,
+        production_source: type === 'production' ? productionSource : null,
+        transfer_destination: type === 'transfer_out' ? transferDestination : null,
+        loss_reason: type === 'loss' ? lossReason : null,
+        kind_of_spirit: kindOfSpirit || null,
         notes: notes || null,
       });
       
